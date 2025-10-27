@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "keywords": ["pebble-app"],
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "pebble-clay": "^1.0.0"
+  },
   "pebble": {
     "displayName": "myfirstproject",
     "uuid": "00000000-0000-0000-0000-000000000001",
@@ -18,8 +20,9 @@
       "emery"
     ],
     "watchapp": {
-      "watchface": false
+      "watchface": true
     },
+    "capabilities": ["configurable"],
     "messageKeys": [
       "dummy"
     ],
