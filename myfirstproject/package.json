@@ -1,6 +1,6 @@
 {
-  "name": "myfirstproject",
-  "author": "MakeAwesomeHappen",
+  "name": "Word Of The Lord",
+  "author": "ClickCalickClick",
   "version": "1.0.0",
   "keywords": ["pebble-app"],
   "private": true,
@@ -8,7 +8,7 @@
     "pebble-clay": "^1.0.0"
   },
   "pebble": {
-    "displayName": "myfirstproject",
+    "displayName": "Word Of The Lord",
     "uuid": "00000000-0000-0000-0000-000000000001",
     "sdkVersion": "3",
     "enableMultiJS": true,

@@ -65,6 +65,10 @@ static void prv_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
+  #ifdef PBL_COLOR
+    window_set_background_color(window, GColorYellow);
+  #endif
+
   // Create border layer
   s_border_layer = layer_create(bounds);
   layer_set_update_proc(s_border_layer, prv_border_draw);
