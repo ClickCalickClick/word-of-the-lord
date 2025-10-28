@@ -15,6 +15,15 @@ static TextLayer *s_reference_part_layer;
 // Buffer to store current temperature
 static char s_temp_buffer[8] = "N/A";
 
+// Buffers to store scripture data
+static char s_scripture_text[128] = "Whoever is patient has great understanding, but one who is quick-tempered displays folly.";
+static char s_scripture_ref[32] = "Prov 14:29";
+static char s_scripture_part[8] = "1/1";
+
+// Manual navigation state
+static bool s_manual_mode = false;
+static AppTimer *s_manual_mode_timer = NULL;
+
 static void prv_border_draw(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   
@@ -114,6 +123,8 @@ static void prv_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 // Handle incoming messages from JavaScript
 static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "AppMessage received");
+  
   // Check for weather temperature
   Tuple *temp_tuple = dict_find(iter, MESSAGE_KEY_WEATHER_TEMP);
   if (temp_tuple) {
@@ -122,7 +133,88 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
     prv_update_date(); // Refresh the date line with new temperature
   }
   
-  // TODO: Handle scripture data in Phase 4
+  // Check for scripture text
+  Tuple *scripture_tuple = dict_find(iter, MESSAGE_KEY_SCRIPTURE_TEXT);
+  if (scripture_tuple) {
+    snprintf(s_scripture_text, sizeof(s_scripture_text), "%s", scripture_tuple->value->cstring);
+    APP_LOG(APP_LOG_LEVEL_INFO, "Received scripture text: %s", s_scripture_text);
+    text_layer_set_text(s_scripture_layer, s_scripture_text);
+  }
+  
+  // Check for scripture reference
+  Tuple *ref_tuple = dict_find(iter, MESSAGE_KEY_SCRIPTURE_REF);
+  if (ref_tuple) {
+    snprintf(s_scripture_ref, sizeof(s_scripture_ref), "%s", ref_tuple->value->cstring);
+    APP_LOG(APP_LOG_LEVEL_INFO, "Received scripture reference: %s", s_scripture_ref);
+    text_layer_set_text(s_reference_bold_layer, s_scripture_ref);
+  }
+  
+  // Check for scripture part numbers
+  Tuple *part_current_tuple = dict_find(iter, MESSAGE_KEY_SCRIPTURE_PART_CURRENT);
+  Tuple *part_total_tuple = dict_find(iter, MESSAGE_KEY_SCRIPTURE_PART_TOTAL);
+  if (part_current_tuple && part_total_tuple) {
+    snprintf(s_scripture_part, sizeof(s_scripture_part), "%d/%d", 
+             (int)part_current_tuple->value->int32,
+             (int)part_total_tuple->value->int32);
+    APP_LOG(APP_LOG_LEVEL_INFO, "Received scripture part: %s", s_scripture_part);
+    text_layer_set_text(s_reference_part_layer, s_scripture_part);
+  }
+}
+
+static void prv_inbox_dropped_handler(AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "AppMessage dropped! Reason: %d", (int)reason);
+}
+
+static void prv_outbox_failed_handler(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "AppMessage outbox failed! Reason: %d", (int)reason);
+}
+
+static void prv_outbox_sent_handler(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "AppMessage sent successfully");
+}
+
+// Timer callback to exit manual mode
+static void prv_exit_manual_mode(void *data) {
+  s_manual_mode = false;
+  s_manual_mode_timer = NULL;
+  APP_LOG(APP_LOG_LEVEL_INFO, "Exited manual mode, returning to auto-rotation");
+}
+
+// Request next scripture chunk from JavaScript
+static void prv_request_next_chunk(void) {
+  // Send a message to JS to advance to next chunk
+  DictionaryIterator *iter;
+  app_message_outbox_begin(&iter);
+  
+  if (iter == NULL) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to create outbox iterator");
+    return;
+  }
+  
+  // Send a request for next chunk
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_NEXT_CHUNK, 1);
+  
+  app_message_outbox_send();
+  APP_LOG(APP_LOG_LEVEL_INFO, "Requested next scripture chunk");
+}
+
+// Shake/tap handler
+static void prv_tap_handler(AccelAxisType axis, int32_t direction) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Shake detected!");
+  
+  // Enter manual mode
+  s_manual_mode = true;
+  
+  // Cancel existing timer if any
+  if (s_manual_mode_timer) {
+    app_timer_cancel(s_manual_mode_timer);
+  }
+  
+  // Set timer to exit manual mode after 2 minutes (120000 ms)
+  s_manual_mode_timer = app_timer_register(120000, prv_exit_manual_mode, NULL);
+  
+  // Request next chunk from JavaScript
+  prv_request_next_chunk();
 }
 
 static void prv_window_load(Window *window) {
@@ -192,28 +284,28 @@ static void prv_window_load(Window *window) {
   s_scripture_layer = text_layer_create(GRect(4, 86, bounds.size.w - 8, 58));
   text_layer_set_background_color(s_scripture_layer, GColorClear);
   text_layer_set_text_color(s_scripture_layer, GColorBlack);
-  text_layer_set_text(s_scripture_layer, "Whoever is patient has great understanding, but one who is quick-tempered displays folly.");
+  text_layer_set_text(s_scripture_layer, s_scripture_text);
   text_layer_set_font(s_scripture_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(s_scripture_layer, GTextAlignmentCenter);
   text_layer_set_overflow_mode(s_scripture_layer, GTextOverflowModeTrailingEllipsis);
   layer_add_child(window_layer, text_layer_get_layer(s_scripture_layer));
 
-  // Create reference layer - bold part (e.g., "Proverbs 14:29 - ")
-  s_reference_bold_layer = text_layer_create(GRect(10, 147, 100, 18));
+  // Create reference layer - bold part (e.g., "John 15:9-17")
+  s_reference_bold_layer = text_layer_create(GRect(4, 147, 100, 18));
   text_layer_set_background_color(s_reference_bold_layer, GColorClear);
   text_layer_set_text_color(s_reference_bold_layer, GColorBlack);
-  text_layer_set_text(s_reference_bold_layer, "Proverbs 14:29 -");
+  text_layer_set_text(s_reference_bold_layer, s_scripture_ref);
   text_layer_set_font(s_reference_bold_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD));
-  text_layer_set_text_alignment(s_reference_bold_layer, GTextAlignmentRight);
+  text_layer_set_text_alignment(s_reference_bold_layer, GTextAlignmentLeft);
   layer_add_child(window_layer, text_layer_get_layer(s_reference_bold_layer));
 
-  // Create reference part layer - regular (e.g., " 1/5")
-  s_reference_part_layer = text_layer_create(GRect(110, 147, 34, 18));
+  // Create reference part layer - regular (e.g., "1/8")
+  s_reference_part_layer = text_layer_create(GRect(bounds.size.w - 38, 147, 34, 18));
   text_layer_set_background_color(s_reference_part_layer, GColorClear);
   text_layer_set_text_color(s_reference_part_layer, GColorBlack);
-  text_layer_set_text(s_reference_part_layer, " 1/5");
+  text_layer_set_text(s_reference_part_layer, s_scripture_part);
   text_layer_set_font(s_reference_part_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
-  text_layer_set_text_alignment(s_reference_part_layer, GTextAlignmentLeft);
+  text_layer_set_text_alignment(s_reference_part_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(s_reference_part_layer));
 }
 
@@ -248,12 +340,26 @@ static void prv_init(void) {
   
   // Register AppMessage handlers
   app_message_register_inbox_received(prv_inbox_received_handler);
+  app_message_register_inbox_dropped(prv_inbox_dropped_handler);
+  app_message_register_outbox_failed(prv_outbox_failed_handler);
+  app_message_register_outbox_sent(prv_outbox_sent_handler);
   
-  // Open AppMessage connection
-  app_message_open(128, 128);
+  // Open AppMessage connection with larger buffers for scripture text
+  app_message_open(256, 256);
+  
+  // Subscribe to tap service for shake detection
+  accel_tap_service_subscribe(prv_tap_handler);
 }
 
 static void prv_deinit(void) {
+  // Unsubscribe from tap service
+  accel_tap_service_unsubscribe();
+  
+  // Cancel manual mode timer if active
+  if (s_manual_mode_timer) {
+    app_timer_cancel(s_manual_mode_timer);
+  }
+  
   window_destroy(s_window);
 }
 

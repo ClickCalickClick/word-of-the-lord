@@ -28,7 +28,8 @@
       "SCRIPTURE_TEXT",
       "SCRIPTURE_REF",
       "SCRIPTURE_PART_CURRENT",
-      "SCRIPTURE_PART_TOTAL"
+      "SCRIPTURE_PART_TOTAL",
+      "REQUEST_NEXT_CHUNK"
     ],
     "resources": {
       "media": []

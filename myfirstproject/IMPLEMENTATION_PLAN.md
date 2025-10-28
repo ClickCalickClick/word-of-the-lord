@@ -159,73 +159,51 @@ Transform the current simple time display into a comprehensive watchface showing
 
 ---
 
-### **Phase 4: Gemini API Integration - Daily Gospel**
+### **Phase 4: Gemini API Integration - Daily Gospel** - ✅ COMPLETE
 **Goal**: Fetch and display Catholic daily Gospel reading
+**Status**: ✅ COMPLETE - October 28, 2025
 
-#### Decision Point: Scripture Parsing Strategy
-**NEEDS DECISION** - Choose one approach:
+#### Decision: Scripture Parsing Strategy
+**CHOSEN**: Option B - Gemini sends full gospel once per day, JS parses into hourly chunks
 
-#### **Option A: Gemini Parses & Sends One Verse**
-- Gemini identifies daily gospel reading
-- Gemini splits into individual verses
-- JS requests specific verse based on current hour
-- Gemini responds with single verse + reference
-- **Pros**: Simple watchface logic, less data transfer
-- **Cons**: More API calls (one per hour)
-
-#### **Option B: Gemini Sends Full Gospel, JS Parses**
-- Gemini sends complete daily gospel once per day
-- JS stores full text in array
-- JS splits into displayable chunks
-- JS sends appropriate chunk each hour
-- **Pros**: Fewer API calls, faster hourly updates
-- **Cons**: More complex JS logic, larger data transfer
-
-#### **Option C: Interactive Scrolling**
-- Implement shake or button press detection
-- Show full gospel with scrollable text layer
-- User can read at their own pace
-- **Pros**: User control, complete reading available
-- **Cons**: Requires interaction, more complex UI
-
-**RECOMMENDED**: Hybrid approach - Option B for hourly display + Option C for user-initiated full reading
-
-#### Tasks (will depend on chosen option):
-- [ ] Design Gemini prompt for daily gospel
-  - [ ] Request Catholic daily Gospel reading for current date
-  - [ ] Specify liturgical calendar (e.g., USCCB)
-  - [ ] **IMPORTANT**: Request abbreviated book names (max 4-5 characters)
+#### Tasks:
+- [x] Design Gemini prompt for daily gospel
+  - [x] Request Catholic daily Gospel reading for current date
+  - [x] Specify USCCB liturgical calendar
+  - [x] **IMPORTANT**: Request abbreviated book names (max 5 characters)
     - Examples: Proverbs→Prov, Matthew→Matt, John→John, Ecclesiastes→Eccl
-  - [ ] Define response format with verse divisions
+  - [x] Define response format with verse divisions
 
-- [ ] Implement gospel fetch function
-  - [ ] Fetch on app initialization (or first hour of day)
-  - [ ] Parse response based on chosen strategy
-  - [ ] Store verses/chunks appropriately
+- [x] Implement gospel fetch function
+  - [x] Fetch on app initialization
+  - [x] Parse response into chunks (~120 chars each for 3 lines)
+  - [x] Store verses in gospelData object
 
-- [ ] Implement hourly verse rotation
-  - [ ] Calculate which verse to display based on hour
-  - [ ] Update scripture text layer
-  - [ ] Update reference layer
-  - [ ] Update part indicator (X of Y)
+- [x] Implement hourly verse rotation
+  - [x] Calculate which verse to display based on hour (0-23)
+  - [x] Update scripture text layer
+  - [x] Update reference layer
+  - [x] Update part indicator (X/Y)
 
-- [ ] Add AppMessage communication
-  - [ ] Define message keys for scripture data
-  - [ ] Send verse text to watchface
-  - [ ] Send reference to watchface
-  - [ ] Send part numbers to watchface
+- [x] Add AppMessage communication
+  - [x] Use existing message keys for scripture data
+  - [x] Send verse text to watchface
+  - [x] Send reference to watchface
+  - [x] Send part numbers to watchface
 
-- [ ] Update C code to receive scripture
-  - [ ] Handle AppMessage for scripture updates
-  - [ ] Update text layers with new data
-  - [ ] Handle multi-line text wrapping
+- [x] Update C code to receive scripture
+  - [x] Add static buffers for scripture data
+  - [x] Handle AppMessage for scripture updates
+  - [x] Update text layers with new data
+  - [x] Initialize with default Proverbs 14:29
 
-- [ ] Implement error handling
-  - [ ] Fallback to Proverbs 14:29 on failure
-  - [ ] Display default reference
-  - [ ] Log errors for debugging
+- [x] Implement error handling
+  - [x] Fallback to Proverbs 14:29 on failure
+  - [x] Display default reference "Prov 14:29"
+  - [x] Log errors for debugging
+  - [x] Send default scripture if API fails
 
-**Deliverable**: Daily Gospel reading displays and rotates hourly
+**Deliverable**: ✅ Daily Gospel reading displays and rotates hourly
 
 ---
 
@@ -404,10 +382,12 @@ MESSAGE_KEY_SCRIPTURE_PART_TOTAL
 - **STATUS**: ✅ COMPLETE - October 28, 2025
 
 ### Phase 4: Gospel API
-- [ ] All tasks completed
-- [ ] Scripture rotates hourly
-- [ ] Error handling works
-- [ ] Ready for Phase 5 (if desired)
+- [x] All tasks completed
+- [x] Scripture rotates hourly
+- [x] Error handling works
+- [x] Build successful
+- [x] Ready for Phase 5 (if desired)
+- **STATUS**: ✅ COMPLETE - October 28, 2025
 
 ### Phase 5: User Interaction (Optional)
 - [ ] All tasks completed
@@ -467,6 +447,22 @@ MESSAGE_KEY_SCRIPTURE_PART_TOTAL
   - Temperature buffer updates date info display dynamically
   - Error handling: displays "N/A" on API failure or missing settings
   - Build successful - weather integration complete
+- ✅ **Phase 4 COMPLETE** - Gemini Daily Gospel API Integration
+  - Implemented Option B: Gemini sends full gospel, JS parses into ~120 char chunks
+  - Added `gospelData` object to store verses, reference, and rotation index
+  - Created `fetchGospel()` function with prompt for Catholic daily Gospel
+  - Gemini prompt requests abbreviated book names (Prov, Matt, John, etc.)
+  - Created `parseGospelResponse()` to split gospel into hourly chunks
+  - Created `sendCurrentScripture()` to send appropriate chunk based on hour
+  - Created `sendDefaultScripture()` to handle API failures
+  - Added C code buffers: s_scripture_text[128], s_scripture_ref[32], s_scripture_part[8]
+  - Updated `prv_inbox_received_handler()` to receive all 4 scripture message keys
+  - Scripture fetches on app start (if API key configured)
+  - Scripture fetches after settings changes
+  - Hourly automatic verse rotation (changes based on current hour % total chunks)
+  - Fixed regex syntax error (replaced `/is` flag with `[\s\S]` for older JS)
+  - Default fallback: "Whoever is patient..." - Prov 14:29 - 1/1
+  - Build successful - daily gospel integration complete
 
 ---
 
