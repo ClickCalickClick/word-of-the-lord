@@ -24,7 +24,11 @@
     },
     "capabilities": ["configurable"],
     "messageKeys": [
-      "dummy"
+      "WEATHER_TEMP",
+      "SCRIPTURE_TEXT",
+      "SCRIPTURE_REF",
+      "SCRIPTURE_PART_CURRENT",
+      "SCRIPTURE_PART_TOTAL"
     ],
     "resources": {
       "media": []

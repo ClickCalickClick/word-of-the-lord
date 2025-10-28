@@ -12,6 +12,9 @@ static TextLayer *s_scripture_layer;
 static TextLayer *s_reference_bold_layer;
 static TextLayer *s_reference_part_layer;
 
+// Buffer to store current temperature
+static char s_temp_buffer[8] = "N/A";
+
 static void prv_border_draw(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   
@@ -94,8 +97,9 @@ static void prv_update_date() {
   else if (day == 2 || day == 22) suffix = "nd";
   else if (day == 3 || day == 23) suffix = "rd";
   
-  // Combine everything into one line
-  snprintf(date_info_buffer, sizeof(date_info_buffer), "%s the %d%s at N/A", day_buffer, day, suffix);
+  // Combine everything into one line with current temperature
+  snprintf(date_info_buffer, sizeof(date_info_buffer), "%s the %d%s at %s", 
+           day_buffer, day, suffix, s_temp_buffer);
   text_layer_set_text(s_date_info_layer, date_info_buffer);
 }
 
@@ -106,6 +110,19 @@ static void prv_tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   if (units_changed & DAY_UNIT) {
     prv_update_date();
   }
+}
+
+// Handle incoming messages from JavaScript
+static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) {
+  // Check for weather temperature
+  Tuple *temp_tuple = dict_find(iter, MESSAGE_KEY_WEATHER_TEMP);
+  if (temp_tuple) {
+    snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", temp_tuple->value->cstring);
+    APP_LOG(APP_LOG_LEVEL_INFO, "Received temperature: %s", s_temp_buffer);
+    prv_update_date(); // Refresh the date line with new temperature
+  }
+  
+  // TODO: Handle scripture data in Phase 4
 }
 
 static void prv_window_load(Window *window) {
@@ -228,6 +245,12 @@ static void prv_init(void) {
   // Make sure the time and date are displayed from the start
   prv_update_time();
   prv_update_date();
+  
+  // Register AppMessage handlers
+  app_message_register_inbox_received(prv_inbox_received_handler);
+  
+  // Open AppMessage connection
+  app_message_open(128, 128);
 }
 
 static void prv_deinit(void) {
