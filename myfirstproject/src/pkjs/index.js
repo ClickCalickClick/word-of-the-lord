@@ -532,6 +532,15 @@ setInterval(function() {
   }
 }, 60 * 60 * 1000); // 60 minutes
 
+// Fetch new daily scripture at 2AM
+setInterval(function() {
+  var now = new Date();
+  if (now.getHours() === 2 && now.getMinutes() === 0) {
+    console.log('2AM - Fetching new daily scripture');
+    fetchGospel();
+  }
+}, 60 * 1000); // Check every minute
+
 // Listen for messages from the watch (e.g., shake to advance)
 Pebble.addEventListener('appmessage', function(e) {
   console.log('AppMessage received from watch');
