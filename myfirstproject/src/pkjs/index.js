@@ -7,7 +7,8 @@ var messageKeys = require('message_keys');
 // Store settings globally
 var settings = {
   geminiApiKey: '',
-  zipCode: ''
+  zipCode: '',
+  enableShake: true  // Default: shake to advance is enabled
 };
 
 // Store gospel data
@@ -26,6 +27,13 @@ var weatherCache = {
   timestamp: null
 };
 
+// Store summarized gospel cache
+var summarizedGospel = {
+  summary: '',
+  reference: '',
+  fetchDate: null
+};
+
 // Load settings from localStorage
 function loadSettings() {
   if (localStorage.getItem('geminiApiKey')) {
@@ -33,6 +41,9 @@ function loadSettings() {
   }
   if (localStorage.getItem('zipCode')) {
     settings.zipCode = localStorage.getItem('zipCode');
+  }
+  if (localStorage.getItem('enableShake') !== null) {
+    settings.enableShake = localStorage.getItem('enableShake') === 'true';
   }
   
   // Load weather cache
@@ -43,10 +54,23 @@ function loadSettings() {
     weatherCache.timestamp = parseInt(localStorage.getItem('weatherTime'));
   }
   
+  // Load summarized gospel cache
+  if (localStorage.getItem('summarizedGospelText')) {
+    summarizedGospel.summary = localStorage.getItem('summarizedGospelText');
+  }
+  if (localStorage.getItem('summarizedGospelRef')) {
+    summarizedGospel.reference = localStorage.getItem('summarizedGospelRef');
+  }
+  if (localStorage.getItem('summarizedGospelDate')) {
+    summarizedGospel.fetchDate = localStorage.getItem('summarizedGospelDate');
+  }
+  
   console.log('Settings loaded:', {
     hasApiKey: settings.geminiApiKey ? 'yes' : 'no',
     zipCode: settings.zipCode || 'not set',
-    cachedWeather: weatherCache.temperature ? weatherCache.temperature + ' (cached)' : 'none'
+    enableShake: settings.enableShake,
+    cachedWeather: weatherCache.temperature ? weatherCache.temperature + ' (cached)' : 'none',
+    cachedSummary: summarizedGospel.summary ? 'yes' : 'no'
   });
 }
 
@@ -66,17 +90,23 @@ function saveSettings(newSettings) {
     localStorage.setItem('zipCode', settings.zipCode);
     console.log('Zip Code saved:', settings.zipCode);
   }
+  if (newSettings.ENABLE_SHAKE !== undefined) {
+    // Clay returns {value: true/false} for toggles
+    settings.enableShake = newSettings.ENABLE_SHAKE.value !== undefined ? newSettings.ENABLE_SHAKE.value : newSettings.ENABLE_SHAKE;
+    localStorage.setItem('enableShake', settings.enableShake.toString());
+    console.log('Enable Shake saved:', settings.enableShake);
+  }
 }
 
 // Fetch daily gospel reading from Universalis API
-function fetchGospel() {
-  console.log('Fetching daily gospel...');
+function fetchGospel(forceRefresh) {
+  console.log('Fetching daily gospel...', forceRefresh ? '(forced)' : '');
   
-  // Check if we already fetched today's gospel
+  // Check if we already fetched today's gospel (unless forced)
   var today = new Date();
   var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
   
-  if (gospelData.lastFetchDate === todayStr && gospelData.verses.length > 0) {
+  if (!forceRefresh && gospelData.lastFetchDate === todayStr && gospelData.verses.length > 0) {
     console.log('Gospel already fetched for today, using cached version');
     return;
   }
@@ -185,7 +215,16 @@ function parseUniversalisResponse(responseText, dateStr) {
     // Abbreviate book names if needed
     reference = abbreviateBookName(reference);
     
-    // Split into chunks
+    // Check if shake is enabled - determines if we chunk or summarize
+    if (!settings.enableShake) {
+      // Shake disabled: Summarize gospel with Gemini
+      console.log('Shake disabled - summarizing gospel');
+      summarizeGospelWithGemini(fullText, reference);
+      return;
+    }
+    
+    // Shake enabled: Split into chunks for manual advancement
+    console.log('Shake enabled - chunking gospel');
     var chunks = [];
     var maxChunkSize = 120;
     var words = fullText.split(' ');
@@ -265,6 +304,126 @@ function abbreviateBookName(reference) {
   }
   
   return reference;
+}
+
+// Summarize gospel using Gemini to fit in 128 characters
+function summarizeGospelWithGemini(fullText, reference) {
+  console.log('Summarizing gospel with Gemini...');
+  console.log('Original text length:', fullText.length);
+  
+  if (!settings.geminiApiKey) {
+    console.log('No Gemini API key, cannot summarize');
+    sendDefaultScripture();
+    return;
+  }
+  
+  var prompt = `Summarize this Catholic daily Gospel reading in EXACTLY 128 characters or less using Catholic anthropological principles. Preserve the core theological message and moral teaching. Be concise but faithful to the sacred text.
+
+Gospel Reading: ${fullText}
+Reference: ${reference}
+
+Requirements:
+- Maximum 128 characters total
+- Use Catholic theological perspective
+- Focus on central message
+- Be reverent and accurate
+
+Return ONLY the summary text, nothing else.`;
+
+  var requestBody = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }]
+  };
+  
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + settings.geminiApiKey;
+  
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', url, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  
+  xhr.onload = function() {
+    console.log('Gemini summarization response status:', xhr.status);
+    if (xhr.status === 200) {
+      try {
+        var response = JSON.parse(xhr.responseText);
+        console.log('Gemini summarization response received');
+        
+        if (response.candidates && response.candidates[0] && 
+            response.candidates[0].content && response.candidates[0].content.parts) {
+          var summary = response.candidates[0].content.parts[0].text.trim();
+          
+          // Ensure summary doesn't exceed 128 characters
+          if (summary.length > 128) {
+            console.log('Summary too long (' + summary.length + ' chars), truncating...');
+            summary = summary.substring(0, 125) + '...';
+          }
+          
+          console.log('Gospel summarized to ' + summary.length + ' characters');
+          console.log('Summary:', summary);
+          
+          // Cache the summary
+          var today = new Date();
+          var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
+          
+          summarizedGospel.summary = summary;
+          summarizedGospel.reference = reference;
+          summarizedGospel.fetchDate = todayStr;
+          
+          // Save to localStorage
+          localStorage.setItem('summarizedGospelText', summary);
+          localStorage.setItem('summarizedGospelRef', reference);
+          localStorage.setItem('summarizedGospelDate', todayStr);
+          
+          console.log('Summary cached for date:', todayStr);
+          
+          // Send to watch
+          sendSummarizedGospel(summary, reference);
+          
+        } else {
+          console.log('Unexpected Gemini summarization response format');
+          sendDefaultScripture();
+        }
+      } catch (e) {
+        console.log('Error parsing Gemini summarization response: ' + e);
+        sendDefaultScripture();
+      }
+    } else {
+      console.log('Gemini summarization API error: ' + xhr.status);
+      sendDefaultScripture();
+    }
+  };
+  
+  xhr.onerror = function() {
+    console.log('Gemini summarization network error');
+    sendDefaultScripture();
+  };
+  
+  xhr.send(JSON.stringify(requestBody));
+}
+
+// Send summarized gospel to watch (single part, no chunks)
+function sendSummarizedGospel(summary, reference) {
+  console.log('Sending summarized gospel to watch');
+  console.log('Summary:', summary);
+  console.log('Reference:', reference);
+  
+  var dict = {};
+  dict[messageKeys.SCRIPTURE_TEXT] = summary;
+  dict[messageKeys.SCRIPTURE_REF] = reference;
+  dict[messageKeys.SCRIPTURE_PART_CURRENT] = 1;
+  dict[messageKeys.SCRIPTURE_PART_TOTAL] = 1;  // Only 1 part when summarized
+  
+  Pebble.sendAppMessage(dict, 
+    function() {
+      console.log('Summarized gospel sent successfully');
+    },
+    function(e) {
+      console.log('Failed to send summarized gospel: ' + JSON.stringify(e));
+    }
+  );
 }
 
 // Parse Gemini gospel response and split into chunks
@@ -522,9 +681,29 @@ function sendWeatherToWatch(temperature) {
   );
 }
 
+// Send shake enabled setting to watch
+function sendShakeSettingToWatch() {
+  console.log('Sending shake setting to watch:', settings.enableShake);
+  
+  var dict = {};
+  dict[messageKeys.ENABLE_SHAKE] = settings.enableShake ? 1 : 0;
+  
+  Pebble.sendAppMessage(dict, 
+    function() {
+      console.log('Shake setting sent to watch:', settings.enableShake);
+    },
+    function(e) {
+      console.log('Failed to send shake setting: ' + JSON.stringify(e));
+    }
+  );
+}
+
 Pebble.addEventListener('ready', function() {
   console.log('Pebble app ready');
   loadSettings();
+  
+  // Send shake setting to watch
+  sendShakeSettingToWatch();
   
   // Fetch weather and gospel on startup if settings are available
   if (settings.geminiApiKey && settings.zipCode) {
@@ -553,14 +732,23 @@ Pebble.addEventListener('webviewclosed', function(e) {
     console.log('Settings received:', newSettings);
     saveSettings(newSettings);
     
+    // Send updated shake setting to watch
+    sendShakeSettingToWatch();
+    
     // Fetch weather immediately after settings are saved (force refresh)
     fetchWeather(true);
     
-    // Only fetch gospel if we don't have today's yet (in case user just added API key)
-    var today = new Date();
-    var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
-    if (gospelData.lastFetchDate !== todayStr) {
-      fetchGospel();
+    // If shake setting changed, re-fetch gospel to get proper format (chunked vs summarized)
+    if (newSettings.ENABLE_SHAKE !== undefined) {
+      console.log('Shake setting changed, re-fetching gospel');
+      fetchGospel(true);  // Force refresh to re-process gospel
+    } else {
+      // Only fetch gospel if we don't have today's yet (in case user just added API key)
+      var today = new Date();
+      var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
+      if (gospelData.lastFetchDate !== todayStr) {
+        fetchGospel();
+      }
     }
   }
 });

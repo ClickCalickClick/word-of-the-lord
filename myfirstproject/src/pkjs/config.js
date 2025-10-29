@@ -42,6 +42,17 @@ module.exports = [
           "maxlength": "10",
           "required": false
         }
+      },
+      {
+        "type": "heading",
+        "defaultValue": "Gospel Display Options"
+      },
+      {
+        "type": "toggle",
+        "messageKey": "ENABLE_SHAKE",
+        "label": "Enable Shake to Advance",
+        "description": "When OFF: Gospel will be summarized by Gemini using Catholic anthropology to fit on screen (max 128 characters). Summary refreshes daily at 2 AM.",
+        "defaultValue": true
       }
     ]
   },

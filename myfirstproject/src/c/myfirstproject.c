@@ -20,6 +20,9 @@ static char s_scripture_text[128] = "Whoever is patient has great understanding,
 static char s_scripture_ref[32] = "Prov 14:29";
 static char s_scripture_part[8] = "1/1";
 
+// Shake to advance setting
+static bool s_shake_enabled = true;  // Default: enabled
+
 // Manual navigation state
 static bool s_manual_mode = false;
 static AppTimer *s_manual_mode_timer = NULL;
@@ -159,6 +162,13 @@ static void prv_inbox_received_handler(DictionaryIterator *iter, void *context) 
     APP_LOG(APP_LOG_LEVEL_INFO, "Received scripture part: %s", s_scripture_part);
     text_layer_set_text(s_reference_part_layer, s_scripture_part);
   }
+  
+  // Check for shake enabled setting
+  Tuple *shake_tuple = dict_find(iter, MESSAGE_KEY_ENABLE_SHAKE);
+  if (shake_tuple) {
+    s_shake_enabled = shake_tuple->value->int32 == 1;
+    APP_LOG(APP_LOG_LEVEL_INFO, "Shake enabled setting: %s", s_shake_enabled ? "true" : "false");
+  }
 }
 
 static void prv_inbox_dropped_handler(AppMessageResult reason, void *context) {
@@ -201,6 +211,12 @@ static void prv_request_next_chunk(void) {
 // Shake/tap handler
 static void prv_tap_handler(AccelAxisType axis, int32_t direction) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Shake detected!");
+  
+  // Check if shake is enabled
+  if (!s_shake_enabled) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "Shake disabled - ignoring");
+    return;
+  }
   
   // Enter manual mode
   s_manual_mode = true;

@@ -29,7 +29,8 @@
       "SCRIPTURE_REF",
       "SCRIPTURE_PART_CURRENT",
       "SCRIPTURE_PART_TOTAL",
-      "REQUEST_NEXT_CHUNK"
+      "REQUEST_NEXT_CHUNK",
+      "ENABLE_SHAKE"
     ],
     "resources": {
       "media": []
