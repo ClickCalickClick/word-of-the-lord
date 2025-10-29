@@ -317,18 +317,19 @@ function summarizeGospelWithGemini(fullText, reference) {
     return;
   }
   
-  var prompt = `Summarize this Catholic daily Gospel reading in EXACTLY 128 characters or less using Catholic anthropological principles. Preserve the core theological message and moral teaching. Be concise but faithful to the sacred text.
+  var prompt = `Condense this Gospel to max 128 characters. Use shortest words possible while keeping full meaning. Catholic theology. Sacred text.
 
-Gospel Reading: ${fullText}
-Reference: ${reference}
+Gospel: ${fullText}
+Ref: ${reference}
 
-Requirements:
-- Maximum 128 characters total
-- Use Catholic theological perspective
-- Focus on central message
-- Be reverent and accurate
+Rules:
+- Max 128 chars
+- Smallest length of words possible
+- Keep theological implications
+- Reverent
+- Accurate
 
-Return ONLY the summary text, nothing else.`;
+Return summary only.`;
 
   var requestBody = {
     contents: [{
