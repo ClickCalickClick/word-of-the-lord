@@ -20,6 +20,12 @@ var gospelData = {
   lastFetchDate: null  // Track when we last fetched the gospel
 };
 
+// Store weather cache
+var weatherCache = {
+  temperature: null,
+  timestamp: null
+};
+
 // Load settings from localStorage
 function loadSettings() {
   if (localStorage.getItem('geminiApiKey')) {
@@ -28,9 +34,19 @@ function loadSettings() {
   if (localStorage.getItem('zipCode')) {
     settings.zipCode = localStorage.getItem('zipCode');
   }
+  
+  // Load weather cache
+  if (localStorage.getItem('weatherTemp')) {
+    weatherCache.temperature = localStorage.getItem('weatherTemp');
+  }
+  if (localStorage.getItem('weatherTime')) {
+    weatherCache.timestamp = parseInt(localStorage.getItem('weatherTime'));
+  }
+  
   console.log('Settings loaded:', {
     hasApiKey: settings.geminiApiKey ? 'yes' : 'no',
-    zipCode: settings.zipCode || 'not set'
+    zipCode: settings.zipCode || 'not set',
+    cachedWeather: weatherCache.temperature ? weatherCache.temperature + ' (cached)' : 'none'
   });
 }
 
@@ -367,13 +383,25 @@ function sendDefaultScripture() {
 }
 
 // Fetch weather from Weather.com via Gemini parsing
-function fetchWeather() {
+function fetchWeather(forceRefresh) {
   if (!settings.geminiApiKey || !settings.zipCode) {
     console.log('Cannot fetch weather: missing API key or zip code');
     console.log('API Key present:', !!settings.geminiApiKey);
     console.log('Zip Code:', settings.zipCode);
     sendWeatherToWatch('N/A');
     return;
+  }
+  
+  // Check if we have valid cached weather (< 1 hour old) unless forced refresh
+  if (!forceRefresh) {
+    var now = Date.now();
+    var oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    if (weatherCache.temperature && weatherCache.timestamp && (now - weatherCache.timestamp) < oneHour) {
+      console.log('Using cached weather:', weatherCache.temperature, '(age:', Math.round((now - weatherCache.timestamp) / 1000 / 60), 'minutes)');
+      sendWeatherToWatch(weatherCache.temperature);
+      return;
+    }
   }
   
   console.log('Fetching weather for zip code:', settings.zipCode);
@@ -471,6 +499,16 @@ Respond with ONLY the temperature number followed by F, nothing else. Example: 6
 
 // Send weather temperature to the watch
 function sendWeatherToWatch(temperature) {
+  // Update cache with new temperature
+  weatherCache.temperature = temperature;
+  weatherCache.timestamp = Date.now();
+  
+  // Save to localStorage
+  localStorage.setItem('weatherTemp', temperature);
+  localStorage.setItem('weatherTime', weatherCache.timestamp.toString());
+  
+  console.log('Weather cached and sent to watch:', temperature);
+  
   var message = {};
   message[messageKeys.WEATHER_TEMP] = temperature;
   
@@ -490,7 +528,17 @@ Pebble.addEventListener('ready', function() {
   
   // Fetch weather and gospel on startup if settings are available
   if (settings.geminiApiKey && settings.zipCode) {
-    fetchWeather();
+    // Check if we have valid cached weather, otherwise fetch new
+    var now = Date.now();
+    var oneHour = 60 * 60 * 1000;
+    
+    if (weatherCache.temperature && weatherCache.timestamp && (now - weatherCache.timestamp) < oneHour) {
+      console.log('Using cached weather on startup:', weatherCache.temperature);
+      sendWeatherToWatch(weatherCache.temperature);
+    } else {
+      console.log('No valid cached weather, fetching new...');
+      fetchWeather();
+    }
   }
   
   if (settings.geminiApiKey) {
@@ -505,8 +553,8 @@ Pebble.addEventListener('webviewclosed', function(e) {
     console.log('Settings received:', newSettings);
     saveSettings(newSettings);
     
-    // Fetch weather immediately after settings are saved
-    fetchWeather();
+    // Fetch weather immediately after settings are saved (force refresh)
+    fetchWeather(true);
     
     // Only fetch gospel if we don't have today's yet (in case user just added API key)
     var today = new Date();
@@ -519,7 +567,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
 
 // Fetch weather every hour
 setInterval(function() {
-  fetchWeather();
+  fetchWeather(true); // Force refresh to ignore cache
 }, 60 * 60 * 1000); // 60 minutes
 
 // Update scripture every hour (rotate to next chunk)
