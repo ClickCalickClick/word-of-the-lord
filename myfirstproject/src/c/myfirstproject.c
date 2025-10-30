@@ -279,12 +279,12 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(s_ampm_layer2));
 
   // Create separator 1 (after time)
-  s_separator_layer1 = layer_create(GRect(0, 52, bounds.size.w, 4));
+  s_separator_layer1 = layer_create(GRect(0, 50, bounds.size.w, 3));
   layer_set_update_proc(s_separator_layer1, prv_separator_draw);
   layer_add_child(window_layer, s_separator_layer1);
 
   // Create combined date info layer (day, date, temp on one line)
-  s_date_info_layer = text_layer_create(GRect(0, 58, bounds.size.w, 20));
+  s_date_info_layer = text_layer_create(GRect(0, 53, bounds.size.w, 18));
   text_layer_set_background_color(s_date_info_layer, GColorClear);
   text_layer_set_text_color(s_date_info_layer, GColorBlack);
   text_layer_set_font(s_date_info_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
@@ -292,12 +292,12 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(s_date_info_layer));
 
   // Create separator 2 (before scripture)
-  s_separator_layer2 = layer_create(GRect(0, 80, bounds.size.w, 4));
+  s_separator_layer2 = layer_create(GRect(0, 72, bounds.size.w, 3));
   layer_set_update_proc(s_separator_layer2, prv_separator_draw);
   layer_add_child(window_layer, s_separator_layer2);
 
-  // Create scripture text layer (multi-line)
-  s_scripture_layer = text_layer_create(GRect(4, 86, bounds.size.w - 8, 58));
+  // Create scripture text layer (multi-line) - now 72px tall for 5 lines
+  s_scripture_layer = text_layer_create(GRect(4, 74, bounds.size.w - 8, 72));
   text_layer_set_background_color(s_scripture_layer, GColorClear);
   text_layer_set_text_color(s_scripture_layer, GColorBlack);
   text_layer_set_text(s_scripture_layer, s_scripture_text);
@@ -307,7 +307,7 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(s_scripture_layer));
 
   // Create reference layer - bold part (e.g., "John 15:9-17")
-  s_reference_bold_layer = text_layer_create(GRect(4, 147, 100, 18));
+  s_reference_bold_layer = text_layer_create(GRect(4, 145, 100, 17));
   text_layer_set_background_color(s_reference_bold_layer, GColorClear);
   text_layer_set_text_color(s_reference_bold_layer, GColorBlack);
   text_layer_set_text(s_reference_bold_layer, s_scripture_ref);
@@ -316,7 +316,7 @@ static void prv_window_load(Window *window) {
   layer_add_child(window_layer, text_layer_get_layer(s_reference_bold_layer));
 
   // Create reference part layer - regular (e.g., "1/8")
-  s_reference_part_layer = text_layer_create(GRect(bounds.size.w - 38, 147, 34, 18));
+  s_reference_part_layer = text_layer_create(GRect(bounds.size.w - 38, 145, 34, 17));
   text_layer_set_background_color(s_reference_part_layer, GColorClear);
   text_layer_set_text_color(s_reference_part_layer, GColorBlack);
   text_layer_set_text(s_reference_part_layer, s_scripture_part);

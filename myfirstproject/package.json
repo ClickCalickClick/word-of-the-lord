@@ -30,7 +30,12 @@
       "SCRIPTURE_PART_CURRENT",
       "SCRIPTURE_PART_TOTAL",
       "REQUEST_NEXT_CHUNK",
-      "ENABLE_SHAKE"
+      "ENABLE_SHAKE",
+      "SCRIPTURE_SOURCE",
+      "CUSTOM_BOOK",
+      "CUSTOM_CHAPTER",
+      "CUSTOM_VERSE_START",
+      "CUSTOM_VERSE_END"
     ],
     "resources": {
       "media": []

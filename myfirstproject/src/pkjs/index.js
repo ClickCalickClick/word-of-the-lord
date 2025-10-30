@@ -8,7 +8,12 @@ var messageKeys = require('message_keys');
 var settings = {
   geminiApiKey: '',
   zipCode: '',
-  enableShake: true  // Default: shake to advance is enabled
+  enableShake: true,  // Default: shake to advance is enabled
+  scriptureSource: 'daily',  // 'daily' or 'custom'
+  customBook: 'John',
+  customChapter: 3,
+  customVerseStart: 16,
+  customVerseEnd: null  // null means single verse
 };
 
 // Store gospel data
@@ -45,6 +50,22 @@ function loadSettings() {
   if (localStorage.getItem('enableShake') !== null) {
     settings.enableShake = localStorage.getItem('enableShake') === 'true';
   }
+  if (localStorage.getItem('scriptureSource')) {
+    settings.scriptureSource = localStorage.getItem('scriptureSource');
+  }
+  if (localStorage.getItem('customBook')) {
+    settings.customBook = localStorage.getItem('customBook');
+  }
+  if (localStorage.getItem('customChapter')) {
+    settings.customChapter = parseInt(localStorage.getItem('customChapter'));
+  }
+  if (localStorage.getItem('customVerseStart')) {
+    settings.customVerseStart = parseInt(localStorage.getItem('customVerseStart'));
+  }
+  if (localStorage.getItem('customVerseEnd')) {
+    var endVerse = localStorage.getItem('customVerseEnd');
+    settings.customVerseEnd = endVerse ? parseInt(endVerse) : null;
+  }
   
   // Load weather cache
   if (localStorage.getItem('weatherTemp')) {
@@ -69,6 +90,10 @@ function loadSettings() {
     hasApiKey: settings.geminiApiKey ? 'yes' : 'no',
     zipCode: settings.zipCode || 'not set',
     enableShake: settings.enableShake,
+    scriptureSource: settings.scriptureSource,
+    customScripture: settings.scriptureSource === 'custom' ? 
+      settings.customBook + ' ' + settings.customChapter + ':' + settings.customVerseStart + 
+      (settings.customVerseEnd ? '-' + settings.customVerseEnd : '') : 'n/a',
     cachedWeather: weatherCache.temperature ? weatherCache.temperature + ' (cached)' : 'none',
     cachedSummary: summarizedGospel.summary ? 'yes' : 'no'
   });
@@ -95,6 +120,40 @@ function saveSettings(newSettings) {
     settings.enableShake = newSettings.ENABLE_SHAKE.value !== undefined ? newSettings.ENABLE_SHAKE.value : newSettings.ENABLE_SHAKE;
     localStorage.setItem('enableShake', settings.enableShake.toString());
     console.log('Enable Shake saved:', settings.enableShake);
+  }
+  if (newSettings.SCRIPTURE_SOURCE !== undefined) {
+    settings.scriptureSource = newSettings.SCRIPTURE_SOURCE.value || newSettings.SCRIPTURE_SOURCE;
+    localStorage.setItem('scriptureSource', settings.scriptureSource);
+    console.log('Scripture Source saved:', settings.scriptureSource);
+  }
+  if (newSettings.CUSTOM_BOOK !== undefined) {
+    settings.customBook = newSettings.CUSTOM_BOOK.value || newSettings.CUSTOM_BOOK;
+    localStorage.setItem('customBook', settings.customBook);
+    console.log('Custom Book saved:', settings.customBook);
+  }
+  if (newSettings.CUSTOM_CHAPTER !== undefined) {
+    var chapter = newSettings.CUSTOM_CHAPTER.value || newSettings.CUSTOM_CHAPTER;
+    settings.customChapter = parseInt(chapter);
+    localStorage.setItem('customChapter', settings.customChapter.toString());
+    console.log('Custom Chapter saved:', settings.customChapter);
+  }
+  if (newSettings.CUSTOM_VERSE_START !== undefined) {
+    var verseStart = newSettings.CUSTOM_VERSE_START.value || newSettings.CUSTOM_VERSE_START;
+    settings.customVerseStart = parseInt(verseStart);
+    localStorage.setItem('customVerseStart', settings.customVerseStart.toString());
+    console.log('Custom Verse Start saved:', settings.customVerseStart);
+  }
+  if (newSettings.CUSTOM_VERSE_END !== undefined) {
+    var verseEnd = newSettings.CUSTOM_VERSE_END.value || newSettings.CUSTOM_VERSE_END;
+    if (verseEnd && verseEnd !== '') {
+      settings.customVerseEnd = parseInt(verseEnd);
+      localStorage.setItem('customVerseEnd', settings.customVerseEnd.toString());
+      console.log('Custom Verse End saved:', settings.customVerseEnd);
+    } else {
+      settings.customVerseEnd = null;
+      localStorage.removeItem('customVerseEnd');
+      console.log('Custom Verse End cleared (single verse)');
+    }
   }
 }
 
@@ -226,7 +285,7 @@ function parseUniversalisResponse(responseText, dateStr) {
     // Shake enabled: Split into chunks for manual advancement
     console.log('Shake enabled - chunking gospel');
     var chunks = [];
-    var maxChunkSize = 120;
+    var maxChunkSize = 160;  // Increased from 120 to fit 5 lines (72px height)
     var words = fullText.split(' ');
     var currentChunk = '';
     
@@ -306,7 +365,120 @@ function abbreviateBookName(reference) {
   return reference;
 }
 
-// Summarize gospel using Gemini to fit in 128 characters
+// Fetch custom scripture from Bible API (Douay-Rheims Catholic translation)
+function fetchCustomScripture() {
+  console.log('Fetching custom scripture:', 
+    settings.customBook, settings.customChapter + ':' + settings.customVerseStart + 
+    (settings.customVerseEnd ? '-' + settings.customVerseEnd : ''));
+  
+  // Build Bible API URL
+  // Format: https://bible-api.com/john+3:16-17?translation=dra
+  var passage = encodeURIComponent(settings.customBook) + '+' + 
+                settings.customChapter + ':' + settings.customVerseStart;
+  
+  if (settings.customVerseEnd && settings.customVerseEnd > settings.customVerseStart) {
+    passage += '-' + settings.customVerseEnd;
+  }
+  
+  var bibleUrl = 'https://bible-api.com/' + passage + '?translation=dra';
+  console.log('Bible API URL:', bibleUrl);
+  
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', bibleUrl, true);
+  
+  xhr.onload = function() {
+    console.log('Bible API response status:', xhr.status);
+    if (xhr.status === 200) {
+      try {
+        var response = JSON.parse(xhr.responseText);
+        console.log('Bible API response received');
+        
+        var scriptureText = response.text || '';
+        var reference = response.reference || '';
+        
+        // Clean up the text (remove verse numbers and extra whitespace)
+        scriptureText = scriptureText.replace(/\[\d+\]/g, '')  // Remove [1] style verse numbers
+                                    .replace(/\d+:/g, '')       // Remove 16: style verse numbers  
+                                    .replace(/\s+/g, ' ')       // Collapse multiple spaces
+                                    .trim();
+        
+        // Abbreviate book name in reference
+        reference = abbreviateBookName(reference);
+        
+        console.log('Custom scripture loaded:', reference);
+        console.log('Text length:', scriptureText.length);
+        
+        if (!scriptureText || scriptureText.length === 0) {
+          console.log('Custom scripture text is empty');
+          sendDefaultScripture();
+          return;
+        }
+        
+        // Check if shake is enabled - determines if we chunk or summarize
+        if (!settings.enableShake) {
+          // Shake disabled: Summarize scripture with Gemini
+          console.log('Shake disabled - summarizing custom scripture');
+          summarizeGospelWithGemini(scriptureText, reference);
+          return;
+        }
+        
+        // Shake enabled: Split into chunks for manual advancement
+        console.log('Shake enabled - chunking custom scripture');
+        var chunks = [];
+        var maxChunkSize = 160;  // Increased from 120 to fit 5 lines (72px height)
+        var words = scriptureText.split(' ');
+        var currentChunk = '';
+        
+        for (var i = 0; i < words.length; i++) {
+          var word = words[i];
+          var testChunk = currentChunk ? currentChunk + ' ' + word : word;
+          
+          if (testChunk.length > maxChunkSize && currentChunk.length > 0) {
+            chunks.push(currentChunk);
+            currentChunk = word;
+          } else {
+            currentChunk = testChunk;
+          }
+        }
+        
+        if (currentChunk.length > 0) {
+          chunks.push(currentChunk);
+        }
+        
+        console.log('Split into ' + chunks.length + ' chunks');
+        
+        // Store in gospelData (reuse existing structure)
+        gospelData.verses = chunks;
+        gospelData.reference = reference;
+        gospelData.totalParts = chunks.length;
+        gospelData.currentIndex = 0;
+        gospelData.hasStarted = true;
+        gospelData.lastFetchDate = 'custom';  // Mark as custom scripture
+        
+        console.log('Custom scripture loaded, starting at chunk 1');
+        
+        // Send current chunk to watch
+        sendCurrentScripture();
+        
+      } catch (e) {
+        console.log('Error parsing Bible API response: ' + e);
+        sendDefaultScripture();
+      }
+    } else {
+      console.log('Bible API error, status:', xhr.status);
+      sendDefaultScripture();
+    }
+  };
+  
+  xhr.onerror = function() {
+    console.log('Bible API network error');
+    sendDefaultScripture();
+  };
+  
+  xhr.send();
+}
+
+// Abbreviate book names to fit on watch display
 function summarizeGospelWithGemini(fullText, reference) {
   console.log('Summarizing gospel with Gemini...');
   console.log('Original text length:', fullText.length);
@@ -447,9 +619,9 @@ function parseGospelResponse(text) {
   console.log('Reference: ' + reference);
   console.log('Full text length: ' + fullText.length);
   
-  // Split into chunks of approximately 120 characters (to fit 3 lines of GOTHIC_14)
+  // Split into chunks of approximately 160 characters (to fit 5 lines of GOTHIC_14)
   var chunks = [];
-  var maxChunkSize = 120;
+  var maxChunkSize = 160;  // Increased from 120 to fit 5 lines (72px height)
   var words = fullText.split(' ');
   var currentChunk = '';
   
@@ -706,7 +878,7 @@ Pebble.addEventListener('ready', function() {
   // Send shake setting to watch
   sendShakeSettingToWatch();
   
-  // Fetch weather and gospel on startup if settings are available
+  // Fetch weather on startup if settings are available
   if (settings.geminiApiKey && settings.zipCode) {
     // Check if we have valid cached weather, otherwise fetch new
     var now = Date.now();
@@ -721,8 +893,15 @@ Pebble.addEventListener('ready', function() {
     }
   }
   
-  if (settings.geminiApiKey) {
-    fetchGospel();
+  // Fetch scripture based on source setting
+  if (settings.scriptureSource === 'custom') {
+    console.log('Scripture source: Custom');
+    fetchCustomScripture();
+  } else {
+    console.log('Scripture source: Daily Gospel');
+    if (settings.geminiApiKey) {
+      fetchGospel();
+    }
   }
 });
 
@@ -730,8 +909,26 @@ Pebble.addEventListener('ready', function() {
 Pebble.addEventListener('webviewclosed', function(e) {
   if (e && e.response) {
     var newSettings = JSON.parse(decodeURIComponent(e.response));
-    console.log('Settings received:', newSettings);
+    console.log('=== SETTINGS RECEIVED ===');
+    console.log('Raw settings:', JSON.stringify(newSettings));
+    
+    // Track if scripture source or custom scripture details changed
+    var scriptureSourceChanged = newSettings.SCRIPTURE_SOURCE !== undefined;
+    var customScriptureChanged = newSettings.CUSTOM_BOOK !== undefined || 
+                                 newSettings.CUSTOM_CHAPTER !== undefined ||
+                                 newSettings.CUSTOM_VERSE_START !== undefined ||
+                                 newSettings.CUSTOM_VERSE_END !== undefined;
+    
+    console.log('Scripture source changed?', scriptureSourceChanged);
+    console.log('Custom scripture fields changed?', customScriptureChanged);
+    
     saveSettings(newSettings);
+    
+    console.log('After save - settings.scriptureSource:', settings.scriptureSource);
+    console.log('After save - settings.customBook:', settings.customBook);
+    console.log('After save - settings.customChapter:', settings.customChapter);
+    console.log('After save - settings.customVerseStart:', settings.customVerseStart);
+    console.log('After save - settings.customVerseEnd:', settings.customVerseEnd);
     
     // Send updated shake setting to watch
     sendShakeSettingToWatch();
@@ -739,18 +936,46 @@ Pebble.addEventListener('webviewclosed', function(e) {
     // Fetch weather immediately after settings are saved (force refresh)
     fetchWeather(true);
     
-    // If shake setting changed, re-fetch gospel to get proper format (chunked vs summarized)
+    // If shake setting changed, re-fetch scripture to get proper format (chunked vs summarized)
     if (newSettings.ENABLE_SHAKE !== undefined) {
-      console.log('Shake setting changed, re-fetching gospel');
-      fetchGospel(true);  // Force refresh to re-process gospel
-    } else {
-      // Only fetch gospel if we don't have today's yet (in case user just added API key)
-      var today = new Date();
-      var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
-      if (gospelData.lastFetchDate !== todayStr) {
-        fetchGospel();
+      console.log('Shake setting changed, re-fetching scripture');
+      if (settings.scriptureSource === 'custom') {
+        console.log('Fetching custom scripture due to shake change');
+        fetchCustomScripture();
+      } else {
+        console.log('Fetching daily gospel due to shake change');
+        fetchGospel(true);  // Force refresh to re-process gospel
       }
     }
+    // If scripture source changed or custom scripture details changed
+    else if (scriptureSourceChanged || customScriptureChanged) {
+      console.log('Scripture settings changed, current source is:', settings.scriptureSource);
+      if (settings.scriptureSource === 'custom') {
+        console.log('Fetching custom scripture');
+        fetchCustomScripture();
+      } else {
+        console.log('Fetching daily gospel');
+        // Switched to daily gospel - fetch it
+        var today = new Date();
+        var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
+        if (gospelData.lastFetchDate !== todayStr) {
+          fetchGospel();
+        }
+      }
+    }
+    // Otherwise only fetch gospel if we don't have today's yet (in case user just added API key)
+    else {
+      console.log('No scripture changes detected, checking if we need daily gospel...');
+      if (settings.scriptureSource === 'daily') {
+        var today = new Date();
+        var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
+        if (gospelData.lastFetchDate !== todayStr) {
+          console.log('Fetching daily gospel (no cache for today)');
+          fetchGospel();
+        }
+      }
+    }
+    console.log('=== SETTINGS PROCESSING COMPLETE ===');
   }
 });
 
@@ -773,8 +998,13 @@ setInterval(function() {
 setInterval(function() {
   var now = new Date();
   if (now.getHours() === 2 && now.getMinutes() === 0) {
-    console.log('2AM - Fetching new daily scripture');
-    fetchGospel();
+    // Only fetch daily gospel if not using custom scripture
+    if (settings.scriptureSource === 'daily') {
+      console.log('2AM - Fetching new daily scripture');
+      fetchGospel();
+    } else {
+      console.log('2AM - Skipping daily gospel fetch (custom scripture active)');
+    }
   }
 }, 60 * 1000); // Check every minute
 
