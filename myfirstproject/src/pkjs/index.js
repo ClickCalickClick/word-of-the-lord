@@ -632,12 +632,14 @@ function fetchSpiritualLeaderQuote(forceRefresh) {
 function sendQuoteToWatch(quote, attribution, year) {
   console.log('Sending quote to watch:', quote);
   
-  var reference = attribution + ' (' + year + ')';
+  // Put attribution at the end of the quote text
+  // Use simple ASCII hyphen for Pebble compatibility (avoid em dash and other special chars)
+  var quoteWithAttribution = quote + ' - ' + attribution + ' (' + year + ')';
   
   Pebble.sendAppMessage(
     {
-      SCRIPTURE_TEXT: quote,
-      SCRIPTURE_REF: reference,
+      SCRIPTURE_TEXT: quoteWithAttribution,
+      SCRIPTURE_REF: 'Quote of the Day',
       SCRIPTURE_PART_CURRENT: 1,
       SCRIPTURE_PART_TOTAL: 1
     },
