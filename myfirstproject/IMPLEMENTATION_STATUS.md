@@ -1,6 +1,6 @@
 # Catholic Daily Gospel Watchface - Implementation Status
 
-**Last Updated:** October 30, 2025
+**Last Updated:** November 3, 2025
 
 ---
 
@@ -70,11 +70,76 @@ Comprehensive Catholic Daily Gospel watchface for Pebble with weather integratio
   - Shake OFF: Gemini summarizes custom scripture to 128 chars
 - ✅ **Build Success:** All platforms compiled without errors
 
+### Phase 8: Feature 3 - Spiritual Leader Quote Mode (COMPLETED - Nov 3, 2025)
+- ✅ **Settings UI Added:** Toggle and input field in Clay config
+  - Toggle: "Show Spiritual Leader Quotes" (replaces daily gospel when ON)
+  - Input: "Spiritual Leader Name" (e.g., Pope Francis, St. Teresa, C.S. Lewis)
+  - Dynamic visibility: Leader name field only shown when quote mode enabled
+  - Gospel settings hidden when quote mode active
+- ✅ **Message Keys Added:** Added to package.json
+  - `QUOTE_MODE_ENABLED` (boolean toggle)
+  - `SPIRITUAL_LEADER_NAME` (string input)
+- ✅ **Settings Persistence:** Quote mode settings load/save to localStorage
+- ✅ **Gemini Quote Fetching:** Implemented `fetchSpiritualLeaderQuote()` function
+  - API: Gemini Flash Latest model (`gemini-flash-latest`)
+  - Smart name matching: Auto-corrects spelling errors and informal names
+    - Example: "Pope Leo 14th" → "Pope Leo XIV"
+    - Example: "Saint Teressa" → "Saint Teresa"
+    - Example: "CS Lewis" → "C.S. Lewis"
+  - Quote validation: 120 char max, Christian/Catholic focus, authenticated quotes
+  - Recency preference: Living leaders = last 12 months, deceased = any lifetime quote
+  - Attribution format: "Name (Year)"
+- ✅ **Quote History Management:** Prevents repeat quotes
+  - Stores first 50 chars of each quote with timestamp
+  - Retains 2-year history (730 days)
+  - Gemini instructed to avoid previously used quotes
+  - Auto-retry if duplicate detected
+- ✅ **Quote Caching:** Daily refresh at 2 AM
+  - One quote per day
+  - Cached with date, refreshes automatically at 2 AM
+  - Persists across app reloads
+- ✅ **Robust Parsing:** Enhanced Gemini response parser
+  - Handles varied formatting (markdown, bold, quotes, blockquotes)
+  - Logs all parsing steps for debugging
+  - Graceful fallback on parse errors
+- ✅ **Error Handling:** Comprehensive validation
+  - Missing API key → fallback to default scripture
+  - Missing leader name → fallback to daily gospel
+  - Invalid leader → "Quote error - Check settings" on watch
+  - Network errors → error message on watch
+  - Model 404 errors → uses single model (no fallback needed)
+- ✅ **Mode Switching:** Seamless transition between quote and gospel modes
+  - Toggle OFF → returns to daily gospel or custom scripture
+  - Toggle ON without leader name → auto-reverts to gospel
+  - Settings change triggers immediate content refresh
+- ✅ **Build Success:** All platforms compiled without errors
+
+**How Quote Mode Works:**
+- **Quote Mode ON:** Displays daily quote from specified spiritual leader
+- **Quote Mode OFF:** Returns to daily gospel or custom scripture (based on scripture source)
+- **Daily Refresh:** New quote fetched at 2 AM each day
+- **History:** Tracks used quotes to prevent repeats for 2 years
+- **Smart Matching:** AI corrects spelling and identifies intended person
+- **Fallback:** Auto-reverts to gospel if leader name invalid or missing
+
 ---
 
 ## 🚧 REMAINING TODO ITEMS
 
-### 1. Testing Custom Scripture Feature
+### 1. Testing Spiritual Leader Quote Feature
+**Status:** Ready for testing
+
+**Test Plan:**
+- ✅ Build successful
+- ⬜ Test quote mode with various spiritual leaders
+- ⬜ Test spelling correction (e.g., "Pope Leo 14th" → "Pope Leo XIV")
+- ⬜ Test quote caching and daily refresh
+- ⬜ Test quote history (avoid repeats)
+- ⬜ Test mode switching (quote mode ON/OFF)
+- ⬜ Test error handling (invalid leader, missing API key)
+- ⬜ Verify attribution format on watch display
+
+### 2. Testing Custom Scripture Feature
 **Status:** Ready for testing
 
 **Test Plan:**
@@ -86,7 +151,7 @@ Comprehensive Catholic Daily Gospel watchface for Pebble with weather integratio
 - ⬜ Test switching between daily gospel and custom scripture
 - ⬜ Test invalid book/chapter/verse combinations (error handling)
 
-### 2. Future Enhancements (Optional)
+### 3. Future Enhancements (Optional)
 **Status:** Not started
 
 **Ideas:**
