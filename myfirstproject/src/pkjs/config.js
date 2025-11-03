@@ -45,6 +45,29 @@ module.exports = [
       },
       {
         "type": "heading",
+        "defaultValue": "Spiritual Leader Quote Mode"
+      },
+      {
+        "type": "toggle",
+        "messageKey": "QUOTE_MODE_ENABLED",
+        "label": "Show Spiritual Leader Quotes",
+        "description": "Turn ON to replace the daily gospel with a quote from your preferred leader",
+        "defaultValue": false
+      },
+      {
+        "type": "input",
+        "messageKey": "SPIRITUAL_LEADER_NAME",
+        "label": "Spiritual Leader Name",
+        "description": "Example: Pope Francis, St. Teresa of Calcutta, C.S. Lewis",
+        "defaultValue": "",
+        "attributes": {
+          "placeholder": "e.g., Pope Francis",
+          "type": "text",
+          "required": false
+        }
+      },
+      {
+        "type": "heading",
         "defaultValue": "Gospel Display Options"
       },
       {

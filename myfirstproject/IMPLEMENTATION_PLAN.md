@@ -466,4 +466,91 @@ MESSAGE_KEY_SCRIPTURE_PART_TOTAL
 
 ---
 
-**Last Updated**: October 28, 2025
+### **Phase 7: Spiritual Leader Quotes Feature** - 🔄 IN PROGRESS
+**Goal**: Add alternative content mode to display quotes from spiritual leaders
+**Status**: 🔄 IN PROGRESS - November 2, 2025
+
+#### Overview:
+- Add radio button selection in Clay settings: Daily Gospel OR Spiritual Leader Quotes
+- User can specify a spiritual leader (pope, saint, pastor, theologian, influencer)
+- Gemini fetches recent (within 1 year) verified Christian/theological quotes
+- Quotes fit in 5-line text area (~120-150 characters)
+- Attribution format: "- [Name] ([Year])"
+- Track used quotes to avoid repetition (store last 2 years in localStorage)
+- Refresh once per day at 2AM (same as gospel)
+- Fallback behaviors:
+  - Empty name + quote mode enabled → default to gospel
+  - Invalid name or no quotes found → "Quote error - Check settings..."
+  - API failure → default Proverbs 14:29
+
+#### Tasks:
+- [ ] Add new message keys to package.json
+  - [ ] QUOTE_MODE_ENABLED (boolean)
+  - [ ] SPIRITUAL_LEADER_NAME (string)
+
+- [ ] Update Clay Configuration UI (src/pkjs/config.js)
+  - [ ] Add radio button group for content source selection
+    - Option 1: "Daily Catholic Gospel"
+    - Option 2: "Spiritual Leader Quote"
+  - [ ] Add conditional text input for "Spiritual Leader Name"
+    - Only visible when "Spiritual Leader Quote" is selected
+  - [ ] Position radio buttons prominently at top of settings
+  - [ ] Update settings structure and validation
+
+- [ ] Implement Quote History Tracking (src/pkjs/index.js)
+  - [ ] Create `getUsedQuotes()` - retrieve array from localStorage
+  - [ ] Create `saveUsedQuote(quote)` - add to array, prune if >730 quotes (2 years)
+  - [ ] Create `getQuoteHistoryForPrompt()` - format used quotes for Gemini exclusion
+
+- [ ] Implement Gemini Quote Fetching (src/pkjs/index.js)
+  - [ ] Create `fetchSpiritualLeaderQuote(leaderName)` function
+  - [ ] Build prompt requesting:
+    - Recent quote (within last year) from specified spiritual leader
+    - Verified Christian/theological/spirituality content
+    - Proper attribution with year
+    - Character limit: ~120-150 chars for 5-line display
+    - Exclusion of previously used quotes (from history)
+  - [ ] Parse Gemini response for quote text, attribution, and validation
+  - [ ] Error handling:
+    - Invalid leader name → return error message
+    - No quotes available → return error or fallback
+    - API failure → return fallback scripture
+
+- [ ] Update Settings Handler (src/pkjs/index.js)
+  - [ ] Check quote mode enabled status
+  - [ ] Validate spiritual leader name is not empty
+  - [ ] If empty + quote mode ON → default to gospel mode on save
+  - [ ] If valid → save both QUOTE_MODE_ENABLED and SPIRITUAL_LEADER_NAME
+  - [ ] Update daily scheduler (2AM):
+    - Check quote mode setting
+    - Call `fetchSpiritualLeaderQuote()` if quote mode
+    - Call `fetchDailyGospel()` if gospel mode
+  - [ ] Send appropriate data to watchface via AppMessage
+
+- [ ] Update C Code Message Handling (src/c/myfirstproject.c)
+  - [ ] Handle QUOTE_MODE_ENABLED message key
+  - [ ] Handle SPIRITUAL_LEADER_NAME message key
+  - [ ] Update reference display logic:
+    - For quotes: format as "- [Name] ([Year])"
+    - For gospel: keep existing "Book Chapter:Verse - Part X/Y"
+  - [ ] Handle "Quote error - Check settings..." display
+
+- [ ] Testing & Validation
+  - [ ] Test radio button UI and conditional visibility
+  - [ ] Test settings persistence
+  - [ ] Test quote mode with valid leaders (Pope Francis, C.S. Lewis, St. Augustine)
+  - [ ] Test invalid leader name handling
+  - [ ] Test empty name fallback to gospel
+  - [ ] Test quote uniqueness tracking over multiple days
+  - [ ] Test localStorage quote history pruning
+  - [ ] Test gospel mode still works correctly
+  - [ ] Test mode switching
+  - [ ] Verify attribution format displays correctly
+  - [ ] Test all error handling and fallbacks
+  - [ ] Build successful on all platforms
+
+**Deliverable**: 🎯 User can choose between daily gospel or spiritual leader quotes with proper validation and quote uniqueness tracking
+
+---
+
+**Last Updated**: November 2, 2025

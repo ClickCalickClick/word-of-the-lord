@@ -1,6 +1,6 @@
 {
   "name": "Word Of The Lord",
-  "author": "ClickCalHereickClick",
+  "author": "Jared Wuerzburger",
   "version": "1.0.0",
   "keywords": ["pebble-app"],
   "private": true,
@@ -35,7 +35,9 @@
       "CUSTOM_BOOK",
       "CUSTOM_CHAPTER",
       "CUSTOM_VERSE_START",
-      "CUSTOM_VERSE_END"
+      "CUSTOM_VERSE_END",
+      "QUOTE_MODE_ENABLED",
+      "SPIRITUAL_LEADER_NAME"
     ],
     "resources": {
       "media": []

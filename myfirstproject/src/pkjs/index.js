@@ -1,7 +1,150 @@
 // Clay configuration for Pebble settings
+console.log('[INIT] Loading Clay...');
 var Clay = require('pebble-clay');
+console.log('[INIT] Clay loaded');
 var clayConfig = require('./config');
-var clay = new Clay(clayConfig);
+console.log('[INIT] Config loaded, items:', clayConfig.length);
+var clay = new Clay(clayConfig, function(minified) {
+  var clayConfig = this;
+  
+  console.log('[Clay Custom Function] Initializing...');
+  console.log('[Clay Custom Function] clayConfig available:', !!clayConfig);
+  console.log('[Clay Custom Function] EVENTS:', clayConfig.EVENTS);
+  
+  // Function to update visibility based on quote mode
+  function updateQuoteModeVisibility() {
+    console.log('[Clay] updateQuoteModeVisibility called');
+    var quoteModeItem = clayConfig.getItemByMessageKey('QUOTE_MODE_ENABLED');
+    console.log('[Clay] quoteModeItem:', quoteModeItem);
+    
+    if (!quoteModeItem) {
+      console.log('[Clay] ERROR: quoteModeItem not found!');
+      return;
+    }
+    
+    var quoteEnabled = quoteModeItem.get();
+    console.log('[Clay] Quote mode enabled:', quoteEnabled);
+    
+    // Show/hide spiritual leader name based on quote mode
+    var leaderNameItem = clayConfig.getItemByMessageKey('SPIRITUAL_LEADER_NAME');
+    console.log('[Clay] leaderNameItem:', leaderNameItem);
+    
+    if (leaderNameItem) {
+      if (quoteEnabled) {
+        console.log('[Clay] Showing leader name field');
+        leaderNameItem.show();
+      } else {
+        console.log('[Clay] Hiding leader name field');
+        leaderNameItem.hide();
+      }
+    }
+    
+    // Show/hide gospel-specific items when quote mode is off
+    var shakeItem = clayConfig.getItemByMessageKey('ENABLE_SHAKE');
+    var scriptureSourceItem = clayConfig.getItemByMessageKey('SCRIPTURE_SOURCE');
+    var customBookItem = clayConfig.getItemByMessageKey('CUSTOM_BOOK');
+    var customChapterItem = clayConfig.getItemByMessageKey('CUSTOM_CHAPTER');
+    var customVerseStartItem = clayConfig.getItemByMessageKey('CUSTOM_VERSE_START');
+    var customVerseEndItem = clayConfig.getItemByMessageKey('CUSTOM_VERSE_END');
+    
+    console.log('[Clay] Gospel items found:', {
+      shake: !!shakeItem,
+      scriptureSource: !!scriptureSourceItem,
+      customBook: !!customBookItem,
+      customChapter: !!customChapterItem,
+      customVerseStart: !!customVerseStartItem,
+      customVerseEnd: !!customVerseEndItem
+    });
+    
+    if (quoteEnabled) {
+      // Hide all gospel-related items
+      console.log('[Clay] Hiding all gospel items');
+      if (shakeItem) shakeItem.hide();
+      if (scriptureSourceItem) scriptureSourceItem.hide();
+      if (customBookItem) customBookItem.hide();
+      if (customChapterItem) customChapterItem.hide();
+      if (customVerseStartItem) customVerseStartItem.hide();
+      if (customVerseEndItem) customVerseEndItem.hide();
+    } else {
+      // Show gospel items
+      console.log('[Clay] Showing gospel items');
+      if (shakeItem) shakeItem.show();
+      if (scriptureSourceItem) scriptureSourceItem.show();
+      updateCustomScriptureVisibility();
+    }
+  }
+  
+  // Function to update visibility of custom scripture fields
+  function updateCustomScriptureVisibility() {
+    console.log('[Clay] updateCustomScriptureVisibility called');
+    var scriptureSourceItem = clayConfig.getItemByMessageKey('SCRIPTURE_SOURCE');
+    
+    if (!scriptureSourceItem) {
+      console.log('[Clay] ERROR: scriptureSourceItem not found!');
+      return;
+    }
+    
+    var customSelected = scriptureSourceItem.get() === 'custom';
+    console.log('[Clay] Custom scripture selected:', customSelected);
+    
+    var customBookItem = clayConfig.getItemByMessageKey('CUSTOM_BOOK');
+    var customChapterItem = clayConfig.getItemByMessageKey('CUSTOM_CHAPTER');
+    var customVerseStartItem = clayConfig.getItemByMessageKey('CUSTOM_VERSE_START');
+    var customVerseEndItem = clayConfig.getItemByMessageKey('CUSTOM_VERSE_END');
+    
+    if (customSelected) {
+      console.log('[Clay] Showing custom scripture fields');
+      if (customBookItem) customBookItem.show();
+      if (customChapterItem) customChapterItem.show();
+      if (customVerseStartItem) customVerseStartItem.show();
+      if (customVerseEndItem) customVerseEndItem.show();
+    } else {
+      console.log('[Clay] Hiding custom scripture fields');
+      if (customBookItem) customBookItem.hide();
+      if (customChapterItem) customChapterItem.hide();
+      if (customVerseStartItem) customVerseStartItem.hide();
+      if (customVerseEndItem) customVerseEndItem.hide();
+    }
+  }
+  
+  // Listen for changes after the config is built
+  clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function() {
+    console.log('[Clay] AFTER_BUILD event fired');
+    
+    var quoteModeItem = clayConfig.getItemByMessageKey('QUOTE_MODE_ENABLED');
+    var scriptureSourceItem = clayConfig.getItemByMessageKey('SCRIPTURE_SOURCE');
+    
+    console.log('[Clay] Items found after build:', {
+      quoteMode: !!quoteModeItem,
+      scriptureSource: !!scriptureSourceItem
+    });
+    
+    // Set initial visibility
+    console.log('[Clay] Setting initial visibility...');
+    updateQuoteModeVisibility();
+    
+    // Listen for quote mode changes
+    if (quoteModeItem) {
+      console.log('[Clay] Attaching change listener to QUOTE_MODE_ENABLED');
+      quoteModeItem.on('change', function() {
+        console.log('[Clay] QUOTE_MODE_ENABLED changed');
+        updateQuoteModeVisibility();
+      });
+    }
+    
+    // Listen for scripture source changes
+    if (scriptureSourceItem) {
+      console.log('[Clay] Attaching change listener to SCRIPTURE_SOURCE');
+      scriptureSourceItem.on('change', function() {
+        console.log('[Clay] SCRIPTURE_SOURCE changed');
+        updateCustomScriptureVisibility();
+      });
+    }
+    
+    console.log('[Clay] Custom function initialization complete');
+  });
+});
+
 var messageKeys = require('message_keys');
 
 // Store settings globally
@@ -13,7 +156,9 @@ var settings = {
   customBook: 'John',
   customChapter: 3,
   customVerseStart: 16,
-  customVerseEnd: null  // null means single verse
+  customVerseEnd: null,  // null means single verse
+  quoteModeEnabled: false,  // false = daily gospel, true = spiritual leader quote
+  spiritualLeaderName: ''  // Name of spiritual leader for quotes
 };
 
 // Store gospel data
@@ -37,6 +182,20 @@ var summarizedGospel = {
   summary: '',
   reference: '',
   fetchDate: null
+};
+
+// Store spiritual leader quote cache
+var quoteCache = {
+  quote: '',
+  attribution: '',
+  year: '',
+  fetchDate: null
+};
+
+// Store quote history (to avoid repeats)
+var quoteHistory = {
+  quotes: [],  // Array of quote snippets (first 50 chars)
+  maxAge: 730  // Keep quotes for 2 years (730 days)
 };
 
 // Load settings from localStorage
@@ -67,6 +226,14 @@ function loadSettings() {
     settings.customVerseEnd = endVerse ? parseInt(endVerse) : null;
   }
   
+  // Load quote mode settings
+  if (localStorage.getItem('quoteModeEnabled') !== null) {
+    settings.quoteModeEnabled = localStorage.getItem('quoteModeEnabled') === 'true';
+  }
+  if (localStorage.getItem('spiritualLeaderName')) {
+    settings.spiritualLeaderName = localStorage.getItem('spiritualLeaderName');
+  }
+  
   // Load weather cache
   if (localStorage.getItem('weatherTemp')) {
     weatherCache.temperature = localStorage.getItem('weatherTemp');
@@ -86,16 +253,44 @@ function loadSettings() {
     summarizedGospel.fetchDate = localStorage.getItem('summarizedGospelDate');
   }
   
+  // Load quote cache
+  if (localStorage.getItem('quoteText')) {
+    quoteCache.quote = localStorage.getItem('quoteText');
+  }
+  if (localStorage.getItem('quoteAttribution')) {
+    quoteCache.attribution = localStorage.getItem('quoteAttribution');
+  }
+  if (localStorage.getItem('quoteYear')) {
+    quoteCache.year = localStorage.getItem('quoteYear');
+  }
+  if (localStorage.getItem('quoteDate')) {
+    quoteCache.fetchDate = localStorage.getItem('quoteDate');
+  }
+  
+  // Load quote history
+  if (localStorage.getItem('quoteHistory')) {
+    try {
+      quoteHistory.quotes = JSON.parse(localStorage.getItem('quoteHistory'));
+    } catch(e) {
+      console.log('Error loading quote history:', e);
+      quoteHistory.quotes = [];
+    }
+  }
+  
   console.log('Settings loaded:', {
     hasApiKey: settings.geminiApiKey ? 'yes' : 'no',
     zipCode: settings.zipCode || 'not set',
     enableShake: settings.enableShake,
     scriptureSource: settings.scriptureSource,
+    quoteModeEnabled: settings.quoteModeEnabled,
+    spiritualLeaderName: settings.spiritualLeaderName || 'not set',
     customScripture: settings.scriptureSource === 'custom' ? 
       settings.customBook + ' ' + settings.customChapter + ':' + settings.customVerseStart + 
       (settings.customVerseEnd ? '-' + settings.customVerseEnd : '') : 'n/a',
     cachedWeather: weatherCache.temperature ? weatherCache.temperature + ' (cached)' : 'none',
-    cachedSummary: summarizedGospel.summary ? 'yes' : 'no'
+    cachedSummary: summarizedGospel.summary ? 'yes' : 'no',
+    cachedQuote: quoteCache.quote ? 'yes' : 'no',
+    quoteHistorySize: quoteHistory.quotes.length
   });
 }
 
@@ -155,6 +350,324 @@ function saveSettings(newSettings) {
       console.log('Custom Verse End cleared (single verse)');
     }
   }
+  
+  // Handle quote mode settings
+  if (newSettings.QUOTE_MODE_ENABLED !== undefined) {
+    settings.quoteModeEnabled = newSettings.QUOTE_MODE_ENABLED.value !== undefined ? 
+      newSettings.QUOTE_MODE_ENABLED.value : newSettings.QUOTE_MODE_ENABLED;
+    localStorage.setItem('quoteModeEnabled', settings.quoteModeEnabled.toString());
+    console.log('Quote Mode Enabled saved:', settings.quoteModeEnabled);
+  }
+  
+  if (newSettings.SPIRITUAL_LEADER_NAME !== undefined) {
+    settings.spiritualLeaderName = newSettings.SPIRITUAL_LEADER_NAME.value || newSettings.SPIRITUAL_LEADER_NAME;
+    localStorage.setItem('spiritualLeaderName', settings.spiritualLeaderName);
+    console.log('Spiritual Leader Name saved:', settings.spiritualLeaderName);
+  }
+}
+
+// Quote history management functions
+function addQuoteToHistory(quote) {
+  // Store first 50 characters as identifier + timestamp
+  var snippet = quote.substring(0, 50);
+  var entry = {
+    snippet: snippet,
+    timestamp: Date.now()
+  };
+  
+  quoteHistory.quotes.push(entry);
+  
+  // Clean up old quotes (older than 2 years)
+  var twoYearsAgo = Date.now() - (quoteHistory.maxAge * 24 * 60 * 60 * 1000);
+  quoteHistory.quotes = quoteHistory.quotes.filter(function(q) {
+    return q.timestamp > twoYearsAgo;
+  });
+  
+  // Save to localStorage
+  localStorage.setItem('quoteHistory', JSON.stringify(quoteHistory.quotes));
+  console.log('Quote added to history. Total quotes:', quoteHistory.quotes.length);
+}
+
+function getQuoteHistorySnippets() {
+  // Return array of quote snippets for Gemini to avoid
+  return quoteHistory.quotes.map(function(q) { return q.snippet; });
+}
+
+function isQuoteInHistory(quote) {
+  var snippet = quote.substring(0, 50);
+  return quoteHistory.quotes.some(function(q) {
+    return q.snippet === snippet;
+  });
+}
+
+// Parse Gemini response into quote components with verbose logging to aid debugging
+function parseGeminiQuoteResponse(rawText) {
+  console.log('[Gemini Parser] Starting parse');
+
+  if (!rawText || rawText.trim() === '') {
+    console.log('[Gemini Parser] Empty response payload');
+    return null;
+  }
+
+  var sanitized = rawText
+    .replace(/```/g, '')  // strip fenced code blocks
+    .replace(/\*\*/g, '')  // drop bold markers
+    .replace(/^>\s*/gm, '');  // drop blockquote markers
+
+  var lines = sanitized
+    .split(/\r?\n/)
+    .map(function(line) { return line.trim(); })
+    .filter(function(line) { return line.length > 0; });
+
+  console.log('[Gemini Parser] Normalized lines:', JSON.stringify(lines));
+
+  function extractValue(label) {
+    var matchingLine = lines.find(function(line) {
+      return new RegExp('^[-*\\s]*' + label + '\\s*:', 'i').test(line);
+    });
+
+    if (!matchingLine) {
+      console.log('[Gemini Parser] Missing line for', label);
+      return null;
+    }
+
+    var cleaned = matchingLine
+      .replace(/^[-*\s]+/, '')
+      .replace(new RegExp('^' + label + '\\s*:', 'i'), '')
+      .trim();
+
+    // Remove surrounding quotes if present
+    cleaned = cleaned.replace(/^["'`]/, '').replace(/["'`]$/, '');
+
+    return cleaned.trim();
+  }
+
+  var quote = extractValue('quote');
+  var attribution = extractValue('attribution');
+  var year = extractValue('year');
+
+  if (!quote || !attribution || !year) {
+    console.log('[Gemini Parser] Parse failure. quote:', quote, 'attribution:', attribution, 'year:', year);
+    return null;
+  }
+
+  // Normalize year to digits
+  var yearDigits = year.match(/\d{4}/);
+  if (!yearDigits) {
+    console.log('[Gemini Parser] Year missing 4-digit pattern. Raw year:', year);
+    return null;
+  }
+
+  return {
+    quote: quote,
+    attribution: attribution,
+    year: yearDigits[0]
+  };
+}
+
+// Fetch spiritual leader quote from Gemini API
+function fetchSpiritualLeaderQuote(forceRefresh) {
+  console.log('Fetching spiritual leader quote...', forceRefresh ? '(forced)' : '');
+  
+  // Validate settings
+  if (!settings.geminiApiKey) {
+    console.log('No Gemini API key configured');
+    sendDefaultScripture();
+    return;
+  }
+  
+  if (!settings.spiritualLeaderName || settings.spiritualLeaderName.trim() === '') {
+    console.log('No spiritual leader name provided, falling back to daily gospel');
+    settings.quoteModeEnabled = false;
+    localStorage.setItem('quoteModeEnabled', 'false');
+    fetchGospel();
+    return;
+  }
+  
+  // Check if we already fetched today's quote (unless forced)
+  var today = new Date();
+  var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
+  
+  if (!forceRefresh && quoteCache.fetchDate === todayStr && quoteCache.quote) {
+    console.log('Quote already fetched for today, using cached version');
+    sendQuoteToWatch(quoteCache.quote, quoteCache.attribution, quoteCache.year);
+    return;
+  }
+  
+  console.log('Fetching quote from Gemini API for:', settings.spiritualLeaderName);
+  
+  // Build prompt
+  var historySnippets = getQuoteHistorySnippets();
+  var avoidQuotesText = historySnippets.length > 0 ? 
+    '\n\nCRITICAL: You MUST avoid these previously used quotes (first 50 characters shown):\n' + 
+    historySnippets.map(function(s, i) { return (i + 1) + '. ' + s; }).join('\n') : '';
+  
+  var prompt = 'Find a quote from "' + settings.spiritualLeaderName + '" that meets these criteria:\n\n' +
+    'IMPORTANT: First identify the person even if the name has spelling errors, alternative spellings, or uses informal naming (e.g., "Pope Leo 14th" = "Pope Leo XIV", "Saint Teressa" = "Saint Teresa", "CS Lewis" = "C.S. Lewis"). Use your knowledge to match the intended person.\n\n' +
+    '1. Related to Christian theology, spirituality, faith, or Catholic teaching\n' +
+    '2. Maximum 120 characters in length (including punctuation)\n' +
+    '3. Properly attributed with CORRECT/CANONICAL name and year\n' +
+    '4. Verified to be an authentic quote from this person\n' +
+    '5. If this person is living, prefer quotes from the last 12 months when possible\n' +
+    '6. If this person is deceased, select any appropriate quote from their lifetime\n' +
+    avoidQuotesText + '\n\n' +
+    'If the name cannot be matched to ANY recognized Christian spiritual leader, theologian, pope, saint, pastor, or Catholic influencer, ' +
+    'respond with: ERROR: Not a recognized spiritual leader\n\n' +
+    'If no suitable quotes can be found that haven\'t been used before, respond with: ERROR: No quotes found\n\n' +
+    'Format your response EXACTLY as:\n' +
+    'QUOTE: [the quote text]\n' +
+    'ATTRIBUTION: [Correct canonical name]\n' +
+    'YEAR: [year]\n\n' +
+    'Example:\n' +
+    'QUOTE: Let us never forget that authentic power is service\n' +
+    'ATTRIBUTION: Pope Francis\n' +
+    'YEAR: 2024';
+  
+  var requestBody = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }]
+  };
+  
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + 
+            settings.geminiApiKey;
+  console.log('Gemini API: requesting gemini-flash-latest');
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', url, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+
+  xhr.onload = function() {
+    console.log('Gemini API response status:', xhr.status);
+
+    if (xhr.status === 200) {
+      try {
+        var response = JSON.parse(xhr.responseText);
+        console.log('Gemini API response received');
+
+        if (response.candidates && response.candidates[0] && 
+            response.candidates[0].content && response.candidates[0].content.parts) {
+          var parts = response.candidates[0].content.parts;
+          var text = parts.map(function(part, index) {
+            var partText = part.text || '';
+            console.log('Gemini response part', index, ':', partText);
+            return partText;
+          }).join('\n');
+
+          console.log('Gemini response text (combined):', text);
+
+          // Check for errors
+          if (text.indexOf('ERROR:') === 0) {
+            console.log('Gemini returned error:', text);
+            sendQuoteError();
+            return;
+          }
+
+          var parsedQuote = parseGeminiQuoteResponse(text);
+
+          if (parsedQuote) {
+            var quote = parsedQuote.quote;
+            var attribution = parsedQuote.attribution;
+            var year = parsedQuote.year;
+
+            // Validate quote length
+            if (quote.length > 120) {
+              console.log('Quote too long, truncating:', quote.length);
+              quote = quote.substring(0, 117) + '...';
+            }
+
+            // Check if this quote is already in history
+            if (!forceRefresh && isQuoteInHistory(quote)) {
+              console.log('Quote already used, requesting fresh quote');
+              // Try again with force refresh
+              setTimeout(function() { fetchSpiritualLeaderQuote(true); }, 1000);
+              return;
+            }
+
+            // Cache the quote
+            quoteCache.quote = quote;
+            quoteCache.attribution = attribution;
+            quoteCache.year = year;
+            quoteCache.fetchDate = todayStr;
+
+            localStorage.setItem('quoteText', quote);
+            localStorage.setItem('quoteAttribution', attribution);
+            localStorage.setItem('quoteYear', year);
+            localStorage.setItem('quoteDate', todayStr);
+
+            // Add to history
+            addQuoteToHistory(quote);
+
+            // Send to watch
+            sendQuoteToWatch(quote, attribution, year);
+          } else {
+            console.log('Could not parse quote from Gemini response. Raw payload logged above.');
+            sendQuoteError();
+          }
+        } else {
+          console.log('Unexpected Gemini response structure');
+          sendQuoteError();
+        }
+      } catch(e) {
+        console.log('Error parsing Gemini API response:', e);
+        sendQuoteError();
+      }
+    } else {
+      console.log('Gemini API request failed:', xhr.status, 'response:', xhr.responseText || '(empty)');
+      sendQuoteError();
+    }
+  };
+
+  xhr.onerror = function() {
+    console.log('Network error calling Gemini API');
+    sendQuoteError();
+  };
+
+  xhr.send(JSON.stringify(requestBody));
+}
+
+// Send quote to watch
+function sendQuoteToWatch(quote, attribution, year) {
+  console.log('Sending quote to watch:', quote);
+  
+  var reference = attribution + ' (' + year + ')';
+  
+  Pebble.sendAppMessage(
+    {
+      SCRIPTURE_TEXT: quote,
+      SCRIPTURE_REF: reference,
+      SCRIPTURE_PART_CURRENT: 1,
+      SCRIPTURE_PART_TOTAL: 1
+    },
+    function() {
+      console.log('Quote sent successfully');
+    },
+    function(e) {
+      console.log('Failed to send quote:', JSON.stringify(e));
+    }
+  );
+}
+
+// Send quote error to watch
+function sendQuoteError() {
+  console.log('Sending quote error to watch');
+  
+  Pebble.sendAppMessage(
+    {
+      SCRIPTURE_TEXT: 'Quote error - Check settings',
+      SCRIPTURE_REF: 'Settings',
+      SCRIPTURE_PART_CURRENT: 1,
+      SCRIPTURE_PART_TOTAL: 1
+    },
+    function() {
+      console.log('Quote error sent successfully');
+    },
+    function(e) {
+      console.log('Failed to send quote error:', JSON.stringify(e));
+    }
+  );
 }
 
 // Fetch daily gospel reading from Universalis API
@@ -892,15 +1405,33 @@ Pebble.addEventListener('ready', function() {
       fetchWeather();
     }
   }
-  
-  // Fetch scripture based on source setting
-  if (settings.scriptureSource === 'custom') {
-    console.log('Scripture source: Custom');
-    fetchCustomScripture();
+
+  // Decide what to fetch on startup based on quote mode vs scripture
+  if (settings.quoteModeEnabled) {
+    console.log('Quote mode active on startup');
+    if (settings.geminiApiKey && settings.spiritualLeaderName && settings.spiritualLeaderName.trim() !== '') {
+      fetchSpiritualLeaderQuote();
+    } else {
+      console.log('Quote mode enabled but missing API key or leader name, falling back to gospel');
+      // Persist fallback
+      settings.quoteModeEnabled = false;
+      localStorage.setItem('quoteModeEnabled', 'false');
+      if (settings.scriptureSource === 'custom') {
+        fetchCustomScripture();
+      } else if (settings.geminiApiKey) {
+        fetchGospel();
+      }
+    }
   } else {
-    console.log('Scripture source: Daily Gospel');
-    if (settings.geminiApiKey) {
-      fetchGospel();
+    // Not in quote mode: existing scripture behavior
+    if (settings.scriptureSource === 'custom') {
+      console.log('Scripture source: Custom');
+      fetchCustomScripture();
+    } else {
+      console.log('Scripture source: Daily Gospel');
+      if (settings.geminiApiKey) {
+        fetchGospel();
+      }
     }
   }
 });
@@ -912,15 +1443,19 @@ Pebble.addEventListener('webviewclosed', function(e) {
     console.log('=== SETTINGS RECEIVED ===');
     console.log('Raw settings:', JSON.stringify(newSettings));
     
-    // Track if scripture source or custom scripture details changed
+    // Track changes
     var scriptureSourceChanged = newSettings.SCRIPTURE_SOURCE !== undefined;
     var customScriptureChanged = newSettings.CUSTOM_BOOK !== undefined || 
                                  newSettings.CUSTOM_CHAPTER !== undefined ||
                                  newSettings.CUSTOM_VERSE_START !== undefined ||
                                  newSettings.CUSTOM_VERSE_END !== undefined;
+    var quoteModeChanged = newSettings.QUOTE_MODE_ENABLED !== undefined;
+    var leaderChanged = newSettings.SPIRITUAL_LEADER_NAME !== undefined;
     
     console.log('Scripture source changed?', scriptureSourceChanged);
     console.log('Custom scripture fields changed?', customScriptureChanged);
+    console.log('Quote mode changed?', quoteModeChanged);
+    console.log('Leader name changed?', leaderChanged);
     
     saveSettings(newSettings);
     
@@ -929,22 +1464,54 @@ Pebble.addEventListener('webviewclosed', function(e) {
     console.log('After save - settings.customChapter:', settings.customChapter);
     console.log('After save - settings.customVerseStart:', settings.customVerseStart);
     console.log('After save - settings.customVerseEnd:', settings.customVerseEnd);
+    console.log('After save - settings.quoteModeEnabled:', settings.quoteModeEnabled);
+    console.log('After save - settings.spiritualLeaderName:', settings.spiritualLeaderName);
     
     // Send updated shake setting to watch
     sendShakeSettingToWatch();
     
     // Fetch weather immediately after settings are saved (force refresh)
     fetchWeather(true);
-    
-    // If shake setting changed, re-fetch scripture to get proper format (chunked vs summarized)
+
+    // If shake setting changed, re-fetch appropriate content
     if (newSettings.ENABLE_SHAKE !== undefined) {
-      console.log('Shake setting changed, re-fetching scripture');
-      if (settings.scriptureSource === 'custom') {
+      console.log('Shake setting changed, re-fetching content');
+      if (settings.quoteModeEnabled) {
+        // In quote mode, refresh quote
+        fetchSpiritualLeaderQuote(true);
+      } else if (settings.scriptureSource === 'custom') {
         console.log('Fetching custom scripture due to shake change');
         fetchCustomScripture();
       } else {
         console.log('Fetching daily gospel due to shake change');
         fetchGospel(true);  // Force refresh to re-process gospel
+      }
+    }
+    // If quote mode or leader changed, handle switching/fetching
+    else if (quoteModeChanged || leaderChanged) {
+      if (settings.quoteModeEnabled) {
+        // If enabled but no leader name provided, revert to gospel
+        if (!settings.spiritualLeaderName || settings.spiritualLeaderName.trim() === '') {
+          console.log('Quote mode enabled but leader name empty - reverting to gospel');
+          settings.quoteModeEnabled = false;
+          localStorage.setItem('quoteModeEnabled', 'false');
+          if (settings.scriptureSource === 'custom') {
+            fetchCustomScripture();
+          } else {
+            fetchGospel();
+          }
+        } else {
+          // Valid leader provided - fetch quote
+          console.log('Fetching spiritual leader quote due to settings change');
+          fetchSpiritualLeaderQuote(true);
+        }
+      } else {
+        // Quote mode turned off - switch back to scripture
+        if (settings.scriptureSource === 'custom') {
+          fetchCustomScripture();
+        } else {
+          fetchGospel();
+        }
       }
     }
     // If scripture source changed or custom scripture details changed
@@ -963,12 +1530,17 @@ Pebble.addEventListener('webviewclosed', function(e) {
         }
       }
     }
-    // Otherwise only fetch gospel if we don't have today's yet (in case user just added API key)
+    // Otherwise only fetch what's needed if we don't have today's content
     else {
-      console.log('No scripture changes detected, checking if we need daily gospel...');
-      if (settings.scriptureSource === 'daily') {
-        var today = new Date();
-        var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
+      console.log('No major content changes detected, checking cached content...');
+      var today = new Date();
+      var todayStr = (today.getMonth() + 1) + '/' + today.getDate() + '/' + today.getFullYear();
+      if (settings.quoteModeEnabled) {
+        if (quoteCache.fetchDate !== todayStr) {
+          console.log('Fetching daily quote (no cache for today)');
+          fetchSpiritualLeaderQuote();
+        }
+      } else if (settings.scriptureSource === 'daily') {
         if (gospelData.lastFetchDate !== todayStr) {
           console.log('Fetching daily gospel (no cache for today)');
           fetchGospel();
@@ -998,12 +1570,17 @@ setInterval(function() {
 setInterval(function() {
   var now = new Date();
   if (now.getHours() === 2 && now.getMinutes() === 0) {
-    // Only fetch daily gospel if not using custom scripture
-    if (settings.scriptureSource === 'daily') {
-      console.log('2AM - Fetching new daily scripture');
-      fetchGospel();
+    console.log('2AM - Refreshing daily content');
+    
+    // Check what mode we're in
+    if (settings.quoteModeEnabled) {
+      console.log('2AM - Fetching new spiritual leader quote');
+      fetchSpiritualLeaderQuote(true);
+    } else if (settings.scriptureSource === 'daily') {
+      console.log('2AM - Fetching new daily gospel');
+      fetchGospel(true);
     } else {
-      console.log('2AM - Skipping daily gospel fetch (custom scripture active)');
+      console.log('2AM - Skipping refresh (custom scripture active)');
     }
   }
 }, 60 * 1000); // Check every minute
