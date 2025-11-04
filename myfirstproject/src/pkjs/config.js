@@ -1,7 +1,7 @@
 module.exports = [
   {
     "type": "heading",
-    "defaultValue": "Catholic Daily Gospel Settings"
+    "defaultValue": "Daily Gospel Settings"
   },
   {
     "type": "text",
@@ -88,7 +88,7 @@ module.exports = [
         "defaultValue": "daily",
         "options": [
           {
-            "label": "Daily Catholic Gospel",
+            "label": "Daily Gospel",
             "value": "daily"
           },
           {
