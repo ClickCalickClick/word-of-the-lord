@@ -1,7 +1,7 @@
 {
   "name": "Word Of The Lord",
   "author": "Jared Wuerzburger",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {
@@ -16,8 +16,7 @@
       "aplite",
       "basalt",
       "diorite",
-      "emery",
-      "flint"
+      "emery"
     ],
     "watchapp": {
       "watchface": true
