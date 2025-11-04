@@ -46,7 +46,7 @@ A comprehensive Christian Daily Gospel watchface for Pebble smartwatches that di
 ## 🚀 Installation
 
 ### 1. Prerequisites
-- A Pebble smartwatch (any model)
+- A Pebble smartwatch (any model, besides Pebble Time Round (if requested, I can develop the UI for this).
 - Pebble app installed on your smartphone (iOS or Android)
 - Internet connection for downloading the watchface and fetching data
 
