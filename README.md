@@ -64,7 +64,7 @@ A comprehensive Catholic Daily Gospel watchface for Pebble smartwatches that dis
 
 The watchface uses Google's Gemini AI for weather parsing, gospel summarization, and spiritual leader quotes. Here's how to get your free API key:
 
-1. **Visit Google AI Studio**: Go to [https://ai.google.dev/aistudio](https://ai.google.dev/aistudio) (or [https://makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey))
+1. **Visit Google AI Studio**: Go to [https://ai.google.dev/aistudio](https://ai.google.dev/aistudio)
 
 2. **Sign In**: Use your Google account to sign in
 
@@ -211,8 +211,9 @@ Enter your zip code in the settings to get accurate weather information for your
 ### Building from Source
 
 ```bash
-# Navigate to project directory
-cd myfirstproject
+# Clone the repository
+git clone https://github.com/jwuerz/words-of-the-lord.git
+cd words-of-the-lord/myfirstproject
 
 # Install dependencies
 npm install
