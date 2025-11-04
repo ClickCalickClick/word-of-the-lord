@@ -41,7 +41,7 @@ A comprehensive Christian Daily Gospel watchface for Pebble smartwatches that di
 - **Hourly Updates**: Scripture rotates every hour (in chunk mode)
 - **Daily Refresh**: New content automatically loads at 2:00 AM
 - **Elegant UI**: Book-like border design with professional typography
-- **Multi-Platform**: Compatible with all Pebble models (Aplite, Basalt, Chalk, Diorite, Emery)
+- **Multi-Platform**: Compatible with all Pebble models (Aplite, Basalt, Diorite, Emery)
 
 ## 🚀 Installation
 
@@ -51,6 +51,15 @@ A comprehensive Christian Daily Gospel watchface for Pebble smartwatches that di
 - Internet connection for downloading the watchface and fetching data
 
 ### 2. Installation Steps
+
+#### Option A: Install from Rebble/Pebble App Store
+1. Open the Pebble app on your smartphone
+2. Navigate to the Watchfaces section
+3. Search for "Word Of The Lord"
+4. Tap to install directly to your watch
+5. Tap on the watchface in the Pebble app to access Settings
+
+#### Option B: Manual Installation from .pbw File
 1. Download the latest `.pbw` file from the [Releases](../../releases) page
 2. Open the file with your Pebble app
 3. The watchface will automatically install to your watch
@@ -134,12 +143,6 @@ Enter your zip code in the settings to get accurate weather information for your
 3. The part indicator updates (e.g., "2/5" → "3/5")
 4. When you reach the end, it cycles back to the beginning
 
-### Manual Navigation Buttons (Alternative to Shake)
-
-- **UP Button**: Move to previous chunk
-- **DOWN Button**: Move to next chunk
-- The display returns to hourly auto-rotation after 30 seconds of inactivity
-
 ### Automatic Updates
 
 - **Weather**: Updates every hour
@@ -186,7 +189,6 @@ Enter your zip code in the settings to get accurate weather information for your
 - ✅ Pebble (Aplite)
 - ✅ Pebble Steel
 - ✅ Pebble Time (Basalt)
-- ✅ Pebble Time Round (Chalk)
 - ✅ Pebble Time Steel (Diorite)
 - ✅ Pebble Time 2 (Emery)
 
@@ -292,7 +294,6 @@ This project is open source. Please check the repository for license details.
 ### Shake Doesn't Advance Scripture
 - Check that "Enable Shake to Advance" is turned ON in settings
 - Ensure you're shaking the watch with enough force
-- Try using the UP/DOWN buttons as an alternative
 
 ### Custom Scripture Not Loading
 - Verify book name, chapter, and verse numbers are valid
