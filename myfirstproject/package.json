@@ -1,7 +1,7 @@
 {
   "name": "Word Of The Lord",
   "author": "Jared Wuerzburger",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {
@@ -9,7 +9,7 @@
   },
   "pebble": {
     "displayName": "Word Of The Lord",
-    "uuid": "00000000-0000-0000-0000-000000000001",
+    "uuid": "41592943-F125-4406-A718-9D532B29EF9D",
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [
