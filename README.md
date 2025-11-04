@@ -1,4 +1,4 @@
-# Word Of The Lord - Catholic Daily Gospel Watchface for Pebble
+# Word Of The Lord -  Daily Gospel Watchface for Pebble
 
 A comprehensive Catholic Daily Gospel watchface for Pebble smartwatches that displays the time, date, weather, and daily scripture readings. Stay connected to your faith throughout the day with hourly gospel verses or inspirational quotes from spiritual leaders.
 
