@@ -11,7 +11,7 @@ A comprehensive Christian Daily Gospel watchface for Pebble smartwatches that di
 
 ### Scripture Modes
 
-#### 1. Daily Catholic Gospel (Default)
+#### 1. Daily Gospel (Default)
 - Automatically fetches the daily Gospel reading from the Catholic liturgical calendar
 - **Shake to Advance Mode** (Default ON):
   - Gospel text is divided into manageable chunks (~120 characters each)
@@ -19,11 +19,11 @@ A comprehensive Christian Daily Gospel watchface for Pebble smartwatches that di
   - Part indicator shows your progress (e.g., "Part 2 of 5")
 - **AI Summary Mode** (When Shake is OFF):
   - Gemini AI summarizes the entire Gospel into 128 characters
-  - Uses Catholic anthropology to preserve theological meaning
+  - Uses Christian anthropology to preserve theological meaning
   - Perfect for quick daily reflection
 
 #### 2. Custom Scripture Selection
-- Choose any passage from the 73 Catholic Bible books (Douay-Rheims translation)
+- Choose any passage from the 73 Bible books (Douay-Rheims translation)
 - Select specific book, chapter, and verse range
 - Works with both Shake and AI Summary modes
 
@@ -95,7 +95,7 @@ Enter your zip code in the settings to get accurate weather information for your
 
 #### Scripture Source
 
-**Daily Catholic Gospel** (Default)
+**Daily Gospel** (Default)
 - Automatically fetches today's Gospel from the USCCB liturgical calendar
 - Updates daily at 2:00 AM
 
@@ -151,12 +151,12 @@ Enter your zip code in the settings to get accurate weather information for your
 
 ### APIs Used
 
-1. **Universalis API**: Daily Catholic Gospel readings
+1. **Universalis API**: Daily Gospel readings
    - Direct JSON parsing (no AI required)
    - Source: [universalis.com](https://universalis.com)
 
 2. **Bible API**: Custom scripture passages
-   - Translation: Douay-Rheims (Catholic Bible)
+   - Translation: Douay-Rheims (Bible)
    - Source: [bible-api.com](https://bible-api.com)
 
 3. **Gemini AI API**: Intelligent processing
